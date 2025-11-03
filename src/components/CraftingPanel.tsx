@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Hammer, Lock, TrendUp } from '@phosphor-icons/react'
-import { ItemType, TraitType, Traits, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
+import { Progress } from '@/components/ui/progress'
+import { Hammer, Lock, TrendUp, Clock } from '@phosphor-icons/react'
+import { ItemType, TraitType, Traits, CraftingJob, ITEM_DEFINITIONS, TRAIT_INFO, CRAFT_SPEED_UPGRADES } from '@/lib/types'
 import { getItemLevel, getNextLevelThreshold } from '@/lib/game-logic'
 
 interface CraftingPanelProps {
@@ -13,6 +14,8 @@ interface CraftingPanelProps {
   onSelectItem: (item: ItemType) => void
   craftCounts: Record<ItemType, number>
   resources: number
+  craftingQueue: CraftingJob[]
+  craftSpeedLevel: number
   onCraft: (itemType: ItemType, traits: Traits) => void
 }
 
@@ -21,6 +24,8 @@ export function CraftingPanel({
   onSelectItem,
   craftCounts,
   resources,
+  craftingQueue,
+  craftSpeedLevel,
   onCraft
 }: CraftingPanelProps) {
   const [traitValues, setTraitValues] = useState<Traits>({
@@ -29,6 +34,14 @@ export function CraftingPanel({
     durability: 25,
     style: 25
   })
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick(t => t + 1)
+    }, 100)
+    return () => clearInterval(interval)
+  }, [])
 
   const totalResources = useMemo(() => {
     return Object.values(traitValues).reduce((sum, val) => sum + val, 0)
@@ -50,10 +63,54 @@ export function CraftingPanel({
   }
 
   const itemTypes: ItemType[] = ['sword', 'potion', 'armor', 'ring', 'bow']
+  const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === craftSpeedLevel)
+  const speedBonus = speedUpgrade ? Math.round((1 - speedUpgrade.speedMultiplier) * 100) : 0
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">Crafting</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Crafting</h2>
+        {speedBonus > 0 && (
+          <Badge variant="secondary" className="gap-1">
+            <Clock size={14} />
+            +{speedBonus}% Speed
+          </Badge>
+        )}
+      </div>
+
+      {craftingQueue.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">Queue ({craftingQueue.length})</div>
+          {craftingQueue.slice(0, 3).map((job, index) => {
+            const now = Date.now()
+            const elapsed = now - job.startTime
+            const progress = Math.min(100, (elapsed / job.duration) * 100)
+            const remaining = Math.max(0, (job.duration - elapsed) / 1000)
+            const itemDef = ITEM_DEFINITIONS[job.type]
+            
+            return (
+              <div key={job.id} className="p-2 bg-muted/50 rounded-lg space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{itemDef.icon}</span>
+                    <span className="font-medium">{itemDef.name}</span>
+                    {index === 0 && <Badge variant="outline" className="text-xs">Crafting</Badge>}
+                  </div>
+                  <span className="font-mono text-muted-foreground">
+                    {remaining.toFixed(1)}s
+                  </span>
+                </div>
+                <Progress value={progress} className="h-1.5" />
+              </div>
+            )
+          })}
+          {craftingQueue.length > 3 && (
+            <div className="text-xs text-muted-foreground text-center">
+              +{craftingQueue.length - 3} more in queue
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-5 gap-2 mb-6">
         {itemTypes.map(type => {

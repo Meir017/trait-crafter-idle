@@ -20,11 +20,11 @@ The game involves crafting, customer management, and resource allocation with pe
 - **Success criteria**: Resource pool depletes based on allocation, items reflect the trait distribution, resources regenerate over time
 
 ### Item Crafting & Progression
-- **Functionality**: Multiple craftable item types (Sword, Potion, Armor, Ring, Bow) each with 5 levels that unlock based on total crafted count
-- **Purpose**: Provides long-term progression goals and variety in gameplay
+- **Functionality**: Multiple craftable item types (Sword, Potion, Armor, Ring, Bow) each with 5 levels that unlock based on total crafted count. Crafting now takes time based on item type and level, with animations showing progress.
+- **Purpose**: Provides long-term progression goals and variety in gameplay with engaging crafting animations
 - **Trigger**: Player selects an item and clicks craft after allocating resources
-- **Progression**: View available items → Select item → Adjust trait resources → Craft → Item added to inventory → Craft count increases → Level unlocks at thresholds
-- **Success criteria**: Items track individual craft counts, levels unlock at milestones (10, 25, 50, 100 crafted), higher levels provide better base stats
+- **Progression**: View available items → Select item → Adjust trait resources → Click craft → Job added to queue → Progress bar shows completion → Item added to inventory → Craft count increases → Level unlocks at thresholds
+- **Success criteria**: Items track individual craft counts, levels unlock at milestones (10, 25, 50, 100 crafted), higher levels craft faster and provide better base stats, crafting times feel balanced (3-8 seconds base)
 
 ### Customer System
 - **Functionality**: Customers arrive periodically with specific item requests and trait preferences, offering coins for successful trades. Customers only request items that the player has unlocked by crafting at least one of that item type.
@@ -40,12 +40,33 @@ The game involves crafting, customer management, and resource allocation with pe
 - **Progression**: Earn coins from sales → Spend coins on upgrade → Resource generation rate increases permanently → Can craft more frequently
 - **Success criteria**: Each upgrade level costs more coins (50, 150, 300, 600, 1200, 2500, 5000), regeneration rate increases appropriately (2/s, 3/s, 5/s, 8/s, 12/s, 18/s, 25/s), upgrade persists between sessions
 
+### Resource Capacity Upgrades
+- **Functionality**: Upgradeable maximum resource storage capacity from 100 to 2500 across 8 levels
+- **Purpose**: Allows players to store resources for bigger crafting sessions and reduces need to constantly monitor resources
+- **Trigger**: Player clicks capacity upgrade button when they have sufficient coins
+- **Progression**: Earn coins → Purchase upgrade → Max resource cap increases → Can accumulate more resources during idle periods
+- **Success criteria**: Capacity upgrades persist, costs scale appropriately (40, 120, 250, 500, 1000, 2000, 4000), capacities increase (150, 250, 400, 650, 1000, 1500, 2500)
+
+### Craft Speed Upgrades
+- **Functionality**: Reduce crafting time by up to 70% through 8 upgrade levels
+- **Purpose**: Makes gameplay feel faster and more responsive as players progress, rewards investment in efficiency
+- **Trigger**: Player purchases craft speed upgrade from resource panel
+- **Progression**: Earn coins → Buy speed upgrade → All future crafts complete faster → Can produce items more rapidly for customers
+- **Success criteria**: Speed multipliers apply correctly (1.0x down to 0.3x), costs scale (60, 180, 400, 800, 1600, 3200, 6400), upgrades persist, visual feedback shows current speed bonus
+
+### Inventory Size Upgrades
+- **Functionality**: Expand inventory capacity from 50 slots to 1000 slots across 8 levels
+- **Purpose**: Removes storage bottleneck as players craft more frequently and allows stockpiling diverse items for customers
+- **Trigger**: Player purchases inventory upgrade when needed
+- **Progression**: Hit inventory limit → Buy upgrade → Can store more items → Continue crafting without selling immediately
+- **Success criteria**: Inventory counts include queued items, upgrades increase cap (75, 100, 150, 200, 300, 500, 1000), costs scale (80, 200, 450, 900, 1800, 3600, 7200)
+
 ### Inventory & Storage
-- **Functionality**: Grid display of crafted items showing their trait values and item type
+- **Functionality**: Grid display of crafted items showing their trait values and item type, with upgradeable capacity
 - **Purpose**: Visual feedback of crafting results and strategic choice in which items to sell to which customers
 - **Trigger**: Automatically updates when items crafted or sold
 - **Progression**: Item crafted → Appears in inventory with trait breakdown → Customer arrives → Player selects best match → Item removed on sale
-- **Success criteria**: Inventory persists between sessions, displays all relevant item info, allows easy selection for sales
+- **Success criteria**: Inventory persists between sessions, displays all relevant item info including queued items, allows easy selection for sales, shows current capacity vs max
 
 ### Idle Resource Generation
 - **Functionality**: Resources passively regenerate over time even when player is away
@@ -58,10 +79,12 @@ The game involves crafting, customer management, and resource allocation with pe
 
 - **No matching inventory items** - Customer shows "No suitable items in stock" message and leaves after shorter timeout
 - **Resource depletion during craft** - Craft button disabled when insufficient resources, shows warning tooltip
-- **Full inventory** - Either auto-sell oldest items or prevent crafting with clear message (implement 50 item cap)
+- **Full inventory/queue** - Prevent crafting when inventory + queue reaches capacity, show clear message with inventory upgrade suggestion
 - **Multiple customers waiting** - Queue customers with max 3 visible, oldest leaves first if not served within time limit
 - **Page closed during customer visit** - Customers don't persist, only resources and inventory/progression save
+- **Page closed during crafting** - Crafting jobs continue progressing based on timestamp, complete when player returns
 - **First-time player** - Tutorial tooltip overlay explaining resource allocation and customer system
+- **Crafting queue full** - Show queue status in inventory count, prevent new crafts when at capacity
 
 ## Design Direction
 
@@ -100,10 +123,10 @@ Animations should enhance the feeling of a living workshop with items being craf
 
 - **Purposeful Meaning**: Crafting animations feel like magical assembly, customer arrivals feel like visitors entering a shop, resource allocation flows like liquid into molds
 - **Hierarchy of Movement**: 
-  - Primary: Item craft completion (pop in with sparkle effect)
+  - Primary: Item craft completion (pop in with sparkle effect), crafting queue progress (smooth progress bar fills)
   - Secondary: Customer arrival/departure (slide in from right, fade out)
   - Tertiary: Resource changes (smooth number counting, bar fills)
-  - Subtle: Hover states on craftable items (gentle lift/glow)
+  - Subtle: Hover states on craftable items (gentle lift/glow), upgrade button pulses when affordable
 
 ## Component Selection
 
@@ -142,6 +165,10 @@ Animations should enhance the feeling of a living workshop with items being craf
   - Coin/CurrencyDollar (Currency display)
   - Lock (Locked items)
   - User (Customer icon)
+  - Timer/Clock (Craft speed upgrades)
+  - Package (Inventory upgrades)
+  - ArrowUp (Speed upgrades)
+  - Database (Capacity upgrades)
 
 - **Spacing**: 
   - Section gaps: gap-8 (2rem) between major areas (Crafting/Customers/Inventory)

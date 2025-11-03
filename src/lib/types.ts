@@ -17,12 +17,22 @@ export interface CraftedItem {
   level: number
 }
 
+export interface CraftingJob {
+  id: string
+  type: ItemType
+  traits: Traits
+  startTime: number
+  duration: number
+  level: number
+}
+
 export interface ItemDefinition {
   type: ItemType
   name: string
   icon: string
   baseValue: number
   levels: number[]
+  baseCraftTime: number
 }
 
 export interface Customer {
@@ -42,11 +52,15 @@ export interface GameState {
   maxResources: number
   coins: number
   inventory: CraftedItem[]
+  craftingQueue: CraftingJob[]
   craftCounts: Record<ItemType, number>
   lastUpdate: number
   resourceRegenRate: number
   resourceUpgradeLevel: number
   capacityUpgradeLevel: number
+  craftSpeedUpgradeLevel: number
+  inventoryUpgradeLevel: number
+  maxInventorySlots: number
 }
 
 export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
@@ -55,35 +69,40 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     name: 'Sword',
     icon: '⚔️',
     baseValue: 10,
-    levels: [0, 10, 25, 50, 100]
+    levels: [0, 10, 25, 50, 100],
+    baseCraftTime: 5000
   },
   potion: {
     type: 'potion',
     name: 'Potion',
     icon: '🧪',
     baseValue: 8,
-    levels: [0, 10, 25, 50, 100]
+    levels: [0, 10, 25, 50, 100],
+    baseCraftTime: 3000
   },
   armor: {
     type: 'armor',
     name: 'Armor',
     icon: '🛡️',
     baseValue: 15,
-    levels: [0, 10, 25, 50, 100]
+    levels: [0, 10, 25, 50, 100],
+    baseCraftTime: 8000
   },
   ring: {
     type: 'ring',
     name: 'Ring',
     icon: '💍',
     baseValue: 12,
-    levels: [0, 10, 25, 50, 100]
+    levels: [0, 10, 25, 50, 100],
+    baseCraftTime: 6000
   },
   bow: {
     type: 'bow',
     name: 'Bow',
     icon: '🏹',
     baseValue: 11,
-    levels: [0, 10, 25, 50, 100]
+    levels: [0, 10, 25, 50, 100],
+    baseCraftTime: 7000
   }
 }
 
@@ -129,4 +148,26 @@ export const CAPACITY_UPGRADES = [
   { level: 6, maxResources: 1000, cost: 1000 },
   { level: 7, maxResources: 1500, cost: 2000 },
   { level: 8, maxResources: 2500, cost: 4000 }
+]
+
+export const CRAFT_SPEED_UPGRADES = [
+  { level: 1, speedMultiplier: 1.0, cost: 0 },
+  { level: 2, speedMultiplier: 0.9, cost: 60 },
+  { level: 3, speedMultiplier: 0.8, cost: 180 },
+  { level: 4, speedMultiplier: 0.7, cost: 400 },
+  { level: 5, speedMultiplier: 0.6, cost: 800 },
+  { level: 6, speedMultiplier: 0.5, cost: 1600 },
+  { level: 7, speedMultiplier: 0.4, cost: 3200 },
+  { level: 8, speedMultiplier: 0.3, cost: 6400 }
+]
+
+export const INVENTORY_UPGRADES = [
+  { level: 1, maxSlots: 50, cost: 0 },
+  { level: 2, maxSlots: 75, cost: 80 },
+  { level: 3, maxSlots: 100, cost: 200 },
+  { level: 4, maxSlots: 150, cost: 450 },
+  { level: 5, maxSlots: 200, cost: 900 },
+  { level: 6, maxSlots: 300, cost: 1800 },
+  { level: 7, maxSlots: 500, cost: 3600 },
+  { level: 8, maxSlots: 1000, cost: 7200 }
 ]

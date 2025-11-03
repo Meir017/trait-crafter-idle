@@ -77,3 +77,12 @@ export function calculateResourceRegen(lastUpdate: number, currentTime: number):
   const timeDiff = currentTime - lastUpdate
   return Math.floor(timeDiff / 1000)
 }
+
+export function calculateCraftTime(
+  baseTime: number,
+  itemLevel: number,
+  speedMultiplier: number
+): number {
+  const levelBonus = Math.max(0.5, 1 - (itemLevel - 1) * 0.1)
+  return Math.floor(baseTime * speedMultiplier * levelBonus)
+}

@@ -1,8 +1,8 @@
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { Coins, ArrowUp, Database } from '@phosphor-icons/react'
-import { RESOURCE_UPGRADES, CAPACITY_UPGRADES } from '@/lib/types'
+import { Coins, ArrowUp, Database, Timer, Package } from '@phosphor-icons/react'
+import { RESOURCE_UPGRADES, CAPACITY_UPGRADES, CRAFT_SPEED_UPGRADES, INVENTORY_UPGRADES } from '@/lib/types'
 
 interface ResourcePanelProps {
   resources: number
@@ -11,8 +11,12 @@ interface ResourcePanelProps {
   resourceRegenRate: number
   resourceUpgradeLevel: number
   capacityUpgradeLevel: number
+  craftSpeedUpgradeLevel: number
+  inventoryUpgradeLevel: number
   onUpgrade: () => void
   onUpgradeCapacity: () => void
+  onUpgradeCraftSpeed: () => void
+  onUpgradeInventory: () => void
 }
 
 export function ResourcePanel({ 
@@ -22,8 +26,12 @@ export function ResourcePanel({
   resourceRegenRate, 
   resourceUpgradeLevel,
   capacityUpgradeLevel,
+  craftSpeedUpgradeLevel,
+  inventoryUpgradeLevel,
   onUpgrade,
-  onUpgradeCapacity
+  onUpgradeCapacity,
+  onUpgradeCraftSpeed,
+  onUpgradeInventory
 }: ResourcePanelProps) {
   const percentage = (resources / maxResources) * 100
   const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === resourceUpgradeLevel + 1)
@@ -31,6 +39,12 @@ export function ResourcePanel({
   
   const nextCapacityUpgrade = CAPACITY_UPGRADES.find(u => u.level === capacityUpgradeLevel + 1)
   const canUpgradeCapacity = nextCapacityUpgrade && coins >= nextCapacityUpgrade.cost
+
+  const nextCraftSpeedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === craftSpeedUpgradeLevel + 1)
+  const canUpgradeCraftSpeed = nextCraftSpeedUpgrade && coins >= nextCraftSpeedUpgrade.cost
+
+  const nextInventoryUpgrade = INVENTORY_UPGRADES.find(u => u.level === inventoryUpgradeLevel + 1)
+  const canUpgradeInventory = nextInventoryUpgrade && coins >= nextInventoryUpgrade.cost
 
   return (
     <Card className="p-6">
@@ -49,7 +63,7 @@ export function ResourcePanel({
             <span className="text-xs text-muted-foreground">
               +{resourceRegenRate}/s
             </span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {nextUpgrade && (
                 <Button
                   size="sm"
@@ -87,6 +101,48 @@ export function ResourcePanel({
             <span className="font-mono text-lg font-medium text-accent-foreground">
               {coins}
             </span>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t space-y-2">
+          <div className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-2">
+            Upgrades
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {nextCraftSpeedUpgrade && (
+              <Button
+                size="sm"
+                variant={canUpgradeCraftSpeed ? "default" : "outline"}
+                onClick={onUpgradeCraftSpeed}
+                disabled={!canUpgradeCraftSpeed}
+                className="h-9 text-xs gap-1 flex-col py-1"
+              >
+                <div className="flex items-center gap-1">
+                  <Timer size={14} />
+                  <span>Craft Speed</span>
+                </div>
+                <div className="text-xs opacity-70">
+                  {nextCraftSpeedUpgrade.cost} <Coins size={12} weight="fill" className="inline" />
+                </div>
+              </Button>
+            )}
+            {nextInventoryUpgrade && (
+              <Button
+                size="sm"
+                variant={canUpgradeInventory ? "secondary" : "outline"}
+                onClick={onUpgradeInventory}
+                disabled={!canUpgradeInventory}
+                className="h-9 text-xs gap-1 flex-col py-1"
+              >
+                <div className="flex items-center gap-1">
+                  <Package size={14} />
+                  <span>Inventory</span>
+                </div>
+                <div className="text-xs opacity-70">
+                  {nextInventoryUpgrade.cost} <Coins size={12} weight="fill" className="inline" />
+                </div>
+              </Button>
+            )}
           </div>
         </div>
       </div>

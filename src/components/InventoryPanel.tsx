@@ -5,13 +5,24 @@ import { CraftedItem, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
 
 interface InventoryPanelProps {
   inventory: CraftedItem[]
+  maxSlots: number
+  queueLength: number
 }
 
-export function InventoryPanel({ inventory }: InventoryPanelProps) {
+export function InventoryPanel({ inventory, maxSlots, queueLength }: InventoryPanelProps) {
+  const totalUsed = inventory.length + queueLength
+
   if (inventory.length === 0) {
     return (
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Inventory (0 / 50)</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Inventory ({totalUsed} / {maxSlots})
+          {queueLength > 0 && (
+            <span className="text-sm text-muted-foreground ml-2">
+              ({queueLength} crafting)
+            </span>
+          )}
+        </h2>
         <div className="text-center py-8 text-muted-foreground">
           <Package size={48} className="mx-auto mb-2 opacity-50" />
           <p>Your inventory is empty</p>
@@ -24,7 +35,12 @@ export function InventoryPanel({ inventory }: InventoryPanelProps) {
   return (
     <Card className="p-6">
       <h2 className="text-xl font-semibold mb-4">
-        Inventory ({inventory.length} / 50)
+        Inventory ({totalUsed} / {maxSlots})
+        {queueLength > 0 && (
+          <span className="text-sm text-muted-foreground ml-2">
+            ({queueLength} crafting)
+          </span>
+        )}
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {inventory.map(item => {
