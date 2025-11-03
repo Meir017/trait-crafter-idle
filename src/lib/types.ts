@@ -46,6 +46,7 @@ export interface GameState {
   lastUpdate: number
   resourceRegenRate: number
   resourceUpgradeLevel: number
+  capacityUpgradeLevel: number
 }
 
 export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
@@ -117,4 +118,15 @@ export const RESOURCE_UPGRADES = [
   { level: 6, regenRate: 12, cost: 1200 },
   { level: 7, regenRate: 18, cost: 2500 },
   { level: 8, regenRate: 25, cost: 5000 }
+]
+
+export const CAPACITY_UPGRADES = [
+  { level: 1, maxResources: 100, cost: 0 },
+  { level: 2, maxResources: 150, cost: 40 },
+  { level: 3, maxResources: 250, cost: 120 },
+  { level: 4, maxResources: 400, cost: 250 },
+  { level: 5, maxResources: 650, cost: 500 },
+  { level: 6, maxResources: 1000, cost: 1000 },
+  { level: 7, maxResources: 1500, cost: 2000 },
+  { level: 8, maxResources: 2500, cost: 4000 }
 ]

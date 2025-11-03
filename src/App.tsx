@@ -16,7 +16,8 @@ import {
   CUSTOMER_SPAWN_MAX,
   MAX_CUSTOMERS,
   ITEM_DEFINITIONS,
-  RESOURCE_UPGRADES
+  RESOURCE_UPGRADES,
+  CAPACITY_UPGRADES
 } from '@/lib/types'
 import { generateCustomer, calculateItemValue, getItemLevel } from '@/lib/game-logic'
 
@@ -34,7 +35,8 @@ const INITIAL_STATE: GameState = {
   },
   lastUpdate: Date.now(),
   resourceRegenRate: 1,
-  resourceUpgradeLevel: 1
+  resourceUpgradeLevel: 1,
+  capacityUpgradeLevel: 1
 }
 
 function App() {
@@ -216,6 +218,27 @@ function App() {
     toast.success(`Resource production upgraded to level ${nextUpgrade.level}! (+${nextUpgrade.regenRate}/s)`)
   }, [gameState, setGameState])
 
+  const handleUpgradeCapacity = useCallback(() => {
+    if (!gameState) return
+
+    const nextUpgrade = CAPACITY_UPGRADES.find(u => u.level === gameState.capacityUpgradeLevel + 1)
+    
+    if (!nextUpgrade || gameState.coins < nextUpgrade.cost) {
+      toast.error('Not enough coins!')
+      return
+    }
+
+    setGameState(prev => ({
+      ...prev!,
+      coins: prev!.coins - nextUpgrade.cost,
+      maxResources: nextUpgrade.maxResources,
+      capacityUpgradeLevel: nextUpgrade.level,
+      lastUpdate: Date.now()
+    }))
+
+    toast.success(`Resource capacity upgraded to level ${nextUpgrade.level}! (${nextUpgrade.maxResources} max)`)
+  }, [gameState, setGameState])
+
   if (!gameState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -246,7 +269,9 @@ function App() {
                 coins={gameState.coins}
                 resourceRegenRate={gameState.resourceRegenRate}
                 resourceUpgradeLevel={gameState.resourceUpgradeLevel}
+                capacityUpgradeLevel={gameState.capacityUpgradeLevel}
                 onUpgrade={handleUpgradeResources}
+                onUpgradeCapacity={handleUpgradeCapacity}
               />
               <CraftingPanel
                 selectedItem={selectedItem}

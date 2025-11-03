@@ -1,8 +1,8 @@
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { Coins, ArrowUp } from '@phosphor-icons/react'
-import { RESOURCE_UPGRADES } from '@/lib/types'
+import { Coins, ArrowUp, Database } from '@phosphor-icons/react'
+import { RESOURCE_UPGRADES, CAPACITY_UPGRADES } from '@/lib/types'
 
 interface ResourcePanelProps {
   resources: number
@@ -10,7 +10,9 @@ interface ResourcePanelProps {
   coins: number
   resourceRegenRate: number
   resourceUpgradeLevel: number
+  capacityUpgradeLevel: number
   onUpgrade: () => void
+  onUpgradeCapacity: () => void
 }
 
 export function ResourcePanel({ 
@@ -19,11 +21,16 @@ export function ResourcePanel({
   coins, 
   resourceRegenRate, 
   resourceUpgradeLevel,
-  onUpgrade 
+  capacityUpgradeLevel,
+  onUpgrade,
+  onUpgradeCapacity
 }: ResourcePanelProps) {
   const percentage = (resources / maxResources) * 100
   const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === resourceUpgradeLevel + 1)
   const canUpgrade = nextUpgrade && coins >= nextUpgrade.cost
+  
+  const nextCapacityUpgrade = CAPACITY_UPGRADES.find(u => u.level === capacityUpgradeLevel + 1)
+  const canUpgradeCapacity = nextCapacityUpgrade && coins >= nextCapacityUpgrade.cost
 
   return (
     <Card className="p-6">
@@ -38,22 +45,36 @@ export function ResourcePanel({
             </span>
           </div>
           <Progress value={percentage} className="h-3" />
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-2 gap-2">
             <span className="text-xs text-muted-foreground">
               +{resourceRegenRate}/s
             </span>
-            {nextUpgrade && (
-              <Button
-                size="sm"
-                variant={canUpgrade ? "default" : "outline"}
-                onClick={onUpgrade}
-                disabled={!canUpgrade}
-                className="h-7 text-xs gap-1"
-              >
-                <ArrowUp size={14} />
-                Upgrade ({nextUpgrade.cost} <Coins size={14} weight="fill" />)
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {nextUpgrade && (
+                <Button
+                  size="sm"
+                  variant={canUpgrade ? "default" : "outline"}
+                  onClick={onUpgrade}
+                  disabled={!canUpgrade}
+                  className="h-7 text-xs gap-1"
+                >
+                  <ArrowUp size={14} />
+                  Speed ({nextUpgrade.cost} <Coins size={14} weight="fill" />)
+                </Button>
+              )}
+              {nextCapacityUpgrade && (
+                <Button
+                  size="sm"
+                  variant={canUpgradeCapacity ? "secondary" : "outline"}
+                  onClick={onUpgradeCapacity}
+                  disabled={!canUpgradeCapacity}
+                  className="h-7 text-xs gap-1"
+                >
+                  <Database size={14} />
+                  Capacity ({nextCapacityUpgrade.cost} <Coins size={14} weight="fill" />)
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
