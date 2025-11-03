@@ -15,7 +15,8 @@ import {
   CUSTOMER_SPAWN_MIN,
   CUSTOMER_SPAWN_MAX,
   MAX_CUSTOMERS,
-  ITEM_DEFINITIONS
+  ITEM_DEFINITIONS,
+  RESOURCE_UPGRADES
 } from '@/lib/types'
 import { generateCustomer, calculateItemValue, getItemLevel } from '@/lib/game-logic'
 
@@ -31,7 +32,9 @@ const INITIAL_STATE: GameState = {
     ring: 0,
     bow: 0
   },
-  lastUpdate: Date.now()
+  lastUpdate: Date.now(),
+  resourceRegenRate: 1,
+  resourceUpgradeLevel: 1
 }
 
 function App() {
@@ -44,7 +47,7 @@ function App() {
 
     const now = Date.now()
     const timeDiff = now - gameState.lastUpdate
-    const regenAmount = Math.floor(timeDiff / 1000)
+    const regenAmount = Math.floor((timeDiff / 1000) * gameState.resourceRegenRate)
     
     if (regenAmount > 0) {
       setGameState(prev => ({
@@ -59,7 +62,7 @@ function App() {
     const interval = setInterval(() => {
       setGameState(prev => {
         if (!prev) return INITIAL_STATE
-        const newResources = Math.min(prev.maxResources, prev.resources + 1)
+        const newResources = Math.min(prev.maxResources, prev.resources + prev.resourceRegenRate)
         return {
           ...prev,
           resources: newResources,
@@ -75,7 +78,7 @@ function App() {
     const spawnCustomer = () => {
       setCustomers(prev => {
         if (prev.length >= MAX_CUSTOMERS) return prev
-        return [...prev, generateCustomer()]
+        return [...prev, generateCustomer(gameState?.craftCounts)]
       })
     }
 
@@ -90,7 +93,7 @@ function App() {
     let timeoutRef = scheduleNext()
 
     return () => clearTimeout(timeoutRef)
-  }, [])
+  }, [gameState?.craftCounts])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -192,6 +195,27 @@ function App() {
     }
   }, [gameState, customers, setGameState])
 
+  const handleUpgradeResources = useCallback(() => {
+    if (!gameState) return
+
+    const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === gameState.resourceUpgradeLevel + 1)
+    
+    if (!nextUpgrade || gameState.coins < nextUpgrade.cost) {
+      toast.error('Not enough coins!')
+      return
+    }
+
+    setGameState(prev => ({
+      ...prev!,
+      coins: prev!.coins - nextUpgrade.cost,
+      resourceRegenRate: nextUpgrade.regenRate,
+      resourceUpgradeLevel: nextUpgrade.level,
+      lastUpdate: Date.now()
+    }))
+
+    toast.success(`Resource production upgraded to level ${nextUpgrade.level}! (+${nextUpgrade.regenRate}/s)`)
+  }, [gameState, setGameState])
+
   if (!gameState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -220,6 +244,9 @@ function App() {
                 resources={gameState.resources}
                 maxResources={gameState.maxResources}
                 coins={gameState.coins}
+                resourceRegenRate={gameState.resourceRegenRate}
+                resourceUpgradeLevel={gameState.resourceUpgradeLevel}
+                onUpgrade={handleUpgradeResources}
               />
               <CraftingPanel
                 selectedItem={selectedItem}

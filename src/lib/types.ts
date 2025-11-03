@@ -44,6 +44,8 @@ export interface GameState {
   inventory: CraftedItem[]
   craftCounts: Record<ItemType, number>
   lastUpdate: number
+  resourceRegenRate: number
+  resourceUpgradeLevel: number
 }
 
 export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
@@ -105,3 +107,14 @@ export const CUSTOMER_SPAWN_MIN = 20000
 export const CUSTOMER_SPAWN_MAX = 40000
 export const CUSTOMER_PATIENCE = 45000
 export const MAX_CUSTOMERS = 3
+
+export const RESOURCE_UPGRADES = [
+  { level: 1, regenRate: 1, cost: 0 },
+  { level: 2, regenRate: 2, cost: 50 },
+  { level: 3, regenRate: 3, cost: 150 },
+  { level: 4, regenRate: 5, cost: 300 },
+  { level: 5, regenRate: 8, cost: 600 },
+  { level: 6, regenRate: 12, cost: 1200 },
+  { level: 7, regenRate: 18, cost: 2500 },
+  { level: 8, regenRate: 25, cost: 5000 }
+]

@@ -27,11 +27,18 @@ The game involves crafting, customer management, and resource allocation with pe
 - **Success criteria**: Items track individual craft counts, levels unlock at milestones (10, 25, 50, 100 crafted), higher levels provide better base stats
 
 ### Customer System
-- **Functionality**: Customers arrive periodically with specific item requests and trait preferences, offering coins for successful trades
-- **Purpose**: Creates time pressure and strategic crafting decisions - players must craft items that match customer demands
+- **Functionality**: Customers arrive periodically with specific item requests and trait preferences, offering coins for successful trades. Customers only request items that the player has unlocked by crafting at least one of that item type.
+- **Purpose**: Creates time pressure and strategic crafting decisions - players must craft items that match customer demands. Limiting requests to unlocked items provides natural progression gates.
 - **Trigger**: Random customer arrival after time interval (20-40 seconds)
-- **Progression**: Customer arrives → Displays wanted item and preferred traits → Player selects matching item from inventory → Transaction completes → Earn coins → Customer leaves
-- **Success criteria**: Customers display clear preferences, successful trades award coins, customers leave after timeout or purchase, better trait matches yield bonus coins
+- **Progression**: Customer arrives → Displays wanted item (from unlocked types) and preferred traits → Player selects matching item from inventory → Transaction completes → Earn coins → Customer leaves
+- **Success criteria**: Customers display clear preferences, only request unlocked item types, successful trades award coins, customers leave after timeout or purchase, better trait matches yield bonus coins
+
+### Resource Production Upgrades
+- **Functionality**: Players can spend coins to permanently upgrade their resource regeneration rate through 8 upgrade levels (1/s → 25/s)
+- **Purpose**: Provides meaningful coin sink and progression path that accelerates gameplay as players advance
+- **Trigger**: Player clicks upgrade button in resource panel when they have sufficient coins
+- **Progression**: Earn coins from sales → Spend coins on upgrade → Resource generation rate increases permanently → Can craft more frequently
+- **Success criteria**: Each upgrade level costs more coins (50, 150, 300, 600, 1200, 2500, 5000), regeneration rate increases appropriately (2/s, 3/s, 5/s, 8/s, 12/s, 18/s, 25/s), upgrade persists between sessions
 
 ### Inventory & Storage
 - **Functionality**: Grid display of crafted items showing their trait values and item type

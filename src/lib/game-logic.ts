@@ -1,8 +1,21 @@
 import { ItemType, TraitType, ITEM_DEFINITIONS, CUSTOMER_NAMES, Customer } from './types'
 
-export function generateCustomer(): Customer {
-  const itemTypes: ItemType[] = ['sword', 'potion', 'armor', 'ring', 'bow']
+export function getUnlockedItemTypes(craftCounts: Record<ItemType, number>): ItemType[] {
+  const allItemTypes: ItemType[] = ['sword', 'potion', 'armor', 'ring', 'bow']
+  return allItemTypes.filter(itemType => craftCounts[itemType] > 0)
+}
+
+export function generateCustomer(craftCounts?: Record<ItemType, number>): Customer {
   const traitTypes: TraitType[] = ['quality', 'speed', 'durability', 'style']
+  
+  let itemTypes: ItemType[] = ['sword', 'potion', 'armor', 'ring', 'bow']
+  
+  if (craftCounts) {
+    const unlockedItems = getUnlockedItemTypes(craftCounts)
+    if (unlockedItems.length > 0) {
+      itemTypes = unlockedItems
+    }
+  }
   
   const itemType = itemTypes[Math.floor(Math.random() * itemTypes.length)]
   const preferredTrait = traitTypes[Math.floor(Math.random() * traitTypes.length)]
