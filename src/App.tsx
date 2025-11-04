@@ -20,7 +20,8 @@ import {
   RESOURCE_UPGRADES,
   CAPACITY_UPGRADES,
   CRAFT_SPEED_UPGRADES,
-  INVENTORY_UPGRADES
+  INVENTORY_UPGRADES,
+  CRAFTING_SLOTS_UPGRADES
 } from '@/lib/types'
 import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits } from '@/lib/game-logic'
 
@@ -43,7 +44,9 @@ const INITIAL_STATE: GameState = {
   capacityUpgradeLevel: 1,
   craftSpeedUpgradeLevel: 1,
   inventoryUpgradeLevel: 1,
-  maxInventorySlots: 50
+  maxInventorySlots: 50,
+  maxCraftingSlots: 1,
+  craftingSlotsUpgradeLevel: 1
 }
 
 function App() {
@@ -79,12 +82,27 @@ function App() {
         const completedJobs: CraftingJob[] = []
         const remainingJobs: CraftingJob[] = []
         
-        prev.craftingQueue.forEach(job => {
-          const elapsed = now - job.startTime
-          if (elapsed >= job.duration) {
-            completedJobs.push(job)
+        prev.craftingQueue.forEach((job, index) => {
+          if (index < prev.maxCraftingSlots) {
+            const elapsed = now - job.startTime
+            if (elapsed >= job.duration) {
+              completedJobs.push(job)
+            } else {
+              remainingJobs.push(job)
+            }
           } else {
             remainingJobs.push(job)
+          }
+        })
+        
+        const startedJobs: CraftingJob[] = []
+        remainingJobs.forEach((job, index) => {
+          if (index < prev.maxCraftingSlots && !job.startTime) {
+            startedJobs.push({ ...job, startTime: now })
+          } else if (index < prev.maxCraftingSlots && completedJobs.length > 0) {
+            startedJobs.push({ ...job, startTime: job.startTime || now })
+          } else {
+            startedJobs.push(job)
           }
         })
         
@@ -99,7 +117,7 @@ function App() {
         let updatedState = {
           ...prev,
           resources: newResources,
-          craftingQueue: remainingJobs,
+          craftingQueue: startedJobs,
           inventory: [...prev.inventory, ...newItems],
           lastUpdate: now
         }
@@ -158,6 +176,11 @@ function App() {
       
       if (totalCost > prev.resources) {
         toast.error('Not enough resources!')
+        return prev
+      }
+
+      if (prev.craftingQueue.length >= prev.maxCraftingSlots) {
+        toast.error('All crafting slots are busy!')
         return prev
       }
 
@@ -324,6 +347,29 @@ function App() {
     })
   }, [setGameState])
 
+  const handleUpgradeCraftingSlots = useCallback(() => {
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
+
+      const nextUpgrade = CRAFTING_SLOTS_UPGRADES.find(u => u.level === prev.craftingSlotsUpgradeLevel + 1)
+      
+      if (!nextUpgrade || prev.coins < nextUpgrade.cost) {
+        toast.error('Not enough coins!')
+        return prev
+      }
+
+      toast.success(`Crafting slots upgraded to level ${nextUpgrade.level}! (${nextUpgrade.maxSlots} slots)`)
+
+      return {
+        ...prev,
+        coins: prev.coins - nextUpgrade.cost,
+        maxCraftingSlots: nextUpgrade.maxSlots,
+        craftingSlotsUpgradeLevel: nextUpgrade.level,
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
+
   const handleCraftForCustomer = useCallback((customer: Customer) => {
     setGameState(prev => {
       if (!prev) return INITIAL_STATE
@@ -332,6 +378,11 @@ function App() {
 
       if (totalCost > prev.resources) {
         toast.error('Not enough resources!')
+        return prev
+      }
+
+      if (prev.craftingQueue.length >= prev.maxCraftingSlots) {
+        toast.error('All crafting slots are busy!')
         return prev
       }
 
@@ -402,10 +453,12 @@ function App() {
                 capacityUpgradeLevel={gameState.capacityUpgradeLevel}
                 craftSpeedUpgradeLevel={gameState.craftSpeedUpgradeLevel}
                 inventoryUpgradeLevel={gameState.inventoryUpgradeLevel}
+                craftingSlotsUpgradeLevel={gameState.craftingSlotsUpgradeLevel}
                 onUpgrade={handleUpgradeResources}
                 onUpgradeCapacity={handleUpgradeCapacity}
                 onUpgradeCraftSpeed={handleUpgradeCraftSpeed}
                 onUpgradeInventory={handleUpgradeInventory}
+                onUpgradeCraftingSlots={handleUpgradeCraftingSlots}
               />
               <CraftingPanel
                 selectedItem={selectedItem}
@@ -414,6 +467,7 @@ function App() {
                 resources={gameState.resources}
                 craftingQueue={gameState.craftingQueue}
                 craftSpeedLevel={gameState.craftSpeedUpgradeLevel}
+                maxCraftingSlots={gameState.maxCraftingSlots}
                 onCraft={handleCraft}
               />
             </div>

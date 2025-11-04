@@ -33,6 +33,10 @@ export interface ItemDefinition {
   baseValue: number
   levels: number[]
   baseCraftTime: number
+  unlockRequirement?: {
+    itemType: ItemType
+    count: number
+  }
 }
 
 export interface Customer {
@@ -61,6 +65,8 @@ export interface GameState {
   craftSpeedUpgradeLevel: number
   inventoryUpgradeLevel: number
   maxInventorySlots: number
+  maxCraftingSlots: number
+  craftingSlotsUpgradeLevel: number
 }
 
 export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
@@ -78,7 +84,11 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '🧪',
     baseValue: 8,
     levels: [0, 10, 25, 50, 100],
-    baseCraftTime: 3000
+    baseCraftTime: 3000,
+    unlockRequirement: {
+      itemType: 'sword',
+      count: 5
+    }
   },
   armor: {
     type: 'armor',
@@ -86,7 +96,11 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '🛡️',
     baseValue: 15,
     levels: [0, 10, 25, 50, 100],
-    baseCraftTime: 8000
+    baseCraftTime: 8000,
+    unlockRequirement: {
+      itemType: 'potion',
+      count: 10
+    }
   },
   ring: {
     type: 'ring',
@@ -94,7 +108,11 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '💍',
     baseValue: 12,
     levels: [0, 10, 25, 50, 100],
-    baseCraftTime: 6000
+    baseCraftTime: 6000,
+    unlockRequirement: {
+      itemType: 'sword',
+      count: 15
+    }
   },
   bow: {
     type: 'bow',
@@ -102,7 +120,11 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '🏹',
     baseValue: 11,
     levels: [0, 10, 25, 50, 100],
-    baseCraftTime: 7000
+    baseCraftTime: 7000,
+    unlockRequirement: {
+      itemType: 'armor',
+      count: 20
+    }
   }
 }
 
@@ -170,4 +192,15 @@ export const INVENTORY_UPGRADES = [
   { level: 6, maxSlots: 300, cost: 1800 },
   { level: 7, maxSlots: 500, cost: 3600 },
   { level: 8, maxSlots: 1000, cost: 7200 }
+]
+
+export const CRAFTING_SLOTS_UPGRADES = [
+  { level: 1, maxSlots: 1, cost: 0 },
+  { level: 2, maxSlots: 2, cost: 100 },
+  { level: 3, maxSlots: 3, cost: 300 },
+  { level: 4, maxSlots: 4, cost: 700 },
+  { level: 5, maxSlots: 5, cost: 1500 },
+  { level: 6, maxSlots: 6, cost: 3000 },
+  { level: 7, maxSlots: 8, cost: 6000 },
+  { level: 8, maxSlots: 10, cost: 12000 }
 ]

@@ -16,6 +16,7 @@ interface CraftingPanelProps {
   resources: number
   craftingQueue: CraftingJob[]
   craftSpeedLevel: number
+  maxCraftingSlots: number
   onCraft: (itemType: ItemType, traits: Traits) => void
 }
 
@@ -26,6 +27,7 @@ export function CraftingPanel({
   resources,
   craftingQueue,
   craftSpeedLevel,
+  maxCraftingSlots,
   onCraft
 }: CraftingPanelProps) {
   const [traitValues, setTraitValues] = useState<Traits>({
@@ -129,8 +131,13 @@ export function CraftingPanel({
 
       {craftingQueue.length > 0 && (
         <div className="mb-4 space-y-2">
-          <div className="text-sm font-medium text-muted-foreground">Queue ({craftingQueue.length})</div>
-          {craftingQueue.slice(0, 3).map((job, index) => {
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-muted-foreground">Active Crafts</span>
+            <Badge variant="outline" className="gap-1">
+              {Math.min(craftingQueue.length, maxCraftingSlots)} / {maxCraftingSlots} slots
+            </Badge>
+          </div>
+          {craftingQueue.slice(0, maxCraftingSlots).map((job, index) => {
             const now = Date.now()
             const elapsed = now - job.startTime
             const progress = Math.min(100, (elapsed / job.duration) * 100)
@@ -143,7 +150,7 @@ export function CraftingPanel({
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{itemDef.icon}</span>
                     <span className="font-medium">{itemDef.name}</span>
-                    {index === 0 && <Badge variant="outline" className="text-xs">Crafting</Badge>}
+                    <Badge variant="default" className="text-xs px-1.5 py-0">Slot {index + 1}</Badge>
                   </div>
                   <span className="font-mono text-muted-foreground">
                     {remaining.toFixed(1)}s
@@ -153,9 +160,9 @@ export function CraftingPanel({
               </div>
             )
           })}
-          {craftingQueue.length > 3 && (
-            <div className="text-xs text-muted-foreground text-center">
-              +{craftingQueue.length - 3} more in queue
+          {craftingQueue.length > maxCraftingSlots && (
+            <div className="text-xs text-muted-foreground text-center p-2 bg-muted/30 rounded-lg">
+              +{craftingQueue.length - maxCraftingSlots} waiting in queue
             </div>
           )}
         </div>
@@ -166,12 +173,15 @@ export function CraftingPanel({
           const def = ITEM_DEFINITIONS[type]
           const count = craftCounts[type] || 0
           const level = getItemLevel(count)
-          const isLocked = type !== 'sword' && level === 1 && count === 0
+          
+          const unlockReq = def.unlockRequirement
+          const isLocked = unlockReq && (craftCounts[unlockReq.itemType] || 0) < unlockReq.count
+          const unlockProgress = unlockReq ? Math.min(100, ((craftCounts[unlockReq.itemType] || 0) / unlockReq.count) * 100) : 100
 
           return (
             <button
               key={type}
-              onClick={() => onSelectItem(type)}
+              onClick={() => !isLocked && onSelectItem(type)}
               disabled={isLocked}
               className={`
                 relative p-3 rounded-lg border-2 transition-all
@@ -191,9 +201,24 @@ export function CraftingPanel({
                 </Badge>
               )}
               {isLocked && (
-                <div className="absolute inset-0 flex items-center justify-center bg-card/80 rounded-lg">
-                  <Lock size={20} />
-                </div>
+                <>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 rounded-lg">
+                    <Lock size={20} className="mb-1" />
+                    {unlockReq && (
+                      <div className="text-[10px] text-center px-1">
+                        {craftCounts[unlockReq.itemType] || 0}/{unlockReq.count}
+                      </div>
+                    )}
+                  </div>
+                  {unlockReq && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30 rounded-b-lg overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${unlockProgress}%` }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </button>
           )

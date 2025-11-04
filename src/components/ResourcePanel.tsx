@@ -1,8 +1,8 @@
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { Coins, ArrowUp, Database, Timer, Package } from '@phosphor-icons/react'
-import { RESOURCE_UPGRADES, CAPACITY_UPGRADES, CRAFT_SPEED_UPGRADES, INVENTORY_UPGRADES } from '@/lib/types'
+import { Coins, ArrowUp, Database, Timer, Package, Factory } from '@phosphor-icons/react'
+import { RESOURCE_UPGRADES, CAPACITY_UPGRADES, CRAFT_SPEED_UPGRADES, INVENTORY_UPGRADES, CRAFTING_SLOTS_UPGRADES } from '@/lib/types'
 
 interface ResourcePanelProps {
   resources: number
@@ -13,10 +13,12 @@ interface ResourcePanelProps {
   capacityUpgradeLevel: number
   craftSpeedUpgradeLevel: number
   inventoryUpgradeLevel: number
+  craftingSlotsUpgradeLevel: number
   onUpgrade: () => void
   onUpgradeCapacity: () => void
   onUpgradeCraftSpeed: () => void
   onUpgradeInventory: () => void
+  onUpgradeCraftingSlots: () => void
 }
 
 export function ResourcePanel({ 
@@ -28,10 +30,12 @@ export function ResourcePanel({
   capacityUpgradeLevel,
   craftSpeedUpgradeLevel,
   inventoryUpgradeLevel,
+  craftingSlotsUpgradeLevel,
   onUpgrade,
   onUpgradeCapacity,
   onUpgradeCraftSpeed,
-  onUpgradeInventory
+  onUpgradeInventory,
+  onUpgradeCraftingSlots
 }: ResourcePanelProps) {
   const percentage = (resources / maxResources) * 100
   const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === resourceUpgradeLevel + 1)
@@ -45,6 +49,9 @@ export function ResourcePanel({
 
   const nextInventoryUpgrade = INVENTORY_UPGRADES.find(u => u.level === inventoryUpgradeLevel + 1)
   const canUpgradeInventory = nextInventoryUpgrade && coins >= nextInventoryUpgrade.cost
+
+  const nextCraftingSlotsUpgrade = CRAFTING_SLOTS_UPGRADES.find(u => u.level === craftingSlotsUpgradeLevel + 1)
+  const canUpgradeCraftingSlots = nextCraftingSlotsUpgrade && coins >= nextCraftingSlotsUpgrade.cost
 
   return (
     <Card className="p-6">
@@ -140,6 +147,23 @@ export function ResourcePanel({
                 </div>
                 <div className="text-xs opacity-70">
                   {nextInventoryUpgrade.cost} <Coins size={12} weight="fill" className="inline" />
+                </div>
+              </Button>
+            )}
+            {nextCraftingSlotsUpgrade && (
+              <Button
+                size="sm"
+                variant={canUpgradeCraftingSlots ? "default" : "outline"}
+                onClick={onUpgradeCraftingSlots}
+                disabled={!canUpgradeCraftingSlots}
+                className="h-9 text-xs gap-1 flex-col py-1 col-span-2"
+              >
+                <div className="flex items-center gap-1">
+                  <Factory size={14} />
+                  <span>Crafting Slots</span>
+                </div>
+                <div className="text-xs opacity-70">
+                  {nextCraftingSlotsUpgrade.cost} <Coins size={12} weight="fill" className="inline" />
                 </div>
               </Button>
             )}
