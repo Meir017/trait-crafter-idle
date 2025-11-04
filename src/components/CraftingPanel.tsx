@@ -166,7 +166,7 @@ export function CraftingPanel({
           const def = ITEM_DEFINITIONS[type]
           const count = craftCounts[type] || 0
           const level = getItemLevel(count)
-          const isLocked = level === 1 && count === 0
+          const isLocked = type !== 'sword' && level === 1 && count === 0
 
           return (
             <button
