@@ -17,7 +17,7 @@ interface CraftingPanelProps {
   craftingQueue: CraftingJob[]
   craftSpeedLevel: number
   maxCraftingSlots: number
-  onCraft: (itemType: ItemType, traits: Traits, craftLevel?: number, craftTier?: number) => void
+  onCraft: (itemType: ItemType, traits: Traits, craftLevel?: number) => void
 }
 
 export function CraftingPanel({
@@ -37,7 +37,6 @@ export function CraftingPanel({
     style: 25
   })
   const [selectedCraftLevel, setSelectedCraftLevel] = useState(1)
-  const [selectedTier, setSelectedTier] = useState(1)
   const [, setTick] = useState(0)
 
   useEffect(() => {
@@ -46,14 +45,6 @@ export function CraftingPanel({
     }, 100)
     return () => clearInterval(interval)
   }, [])
-
-  useEffect(() => {
-    const craftCount = craftCounts[selectedItem] || 0
-    const availableTiers = getAvailableTiers(selectedItem, craftCount)
-    if (!availableTiers.includes(selectedTier)) {
-      setSelectedTier(availableTiers[availableTiers.length - 1] || 1)
-    }
-  }, [selectedItem, craftCounts, selectedTier])
 
   const totalResources = useMemo(() => {
     return Object.values(traitValues).reduce((sum, val) => sum + val, 0)
@@ -118,7 +109,7 @@ export function CraftingPanel({
   const handleCraft = () => {
     const canCraftNow = totalTraits <= resources && meetsMinimum
     if (canCraftNow) {
-      onCraft(selectedItem, traitValues, selectedCraftLevel, selectedTier)
+      onCraft(selectedItem, traitValues, selectedCraftLevel)
     }
   }
 
@@ -131,15 +122,20 @@ export function CraftingPanel({
   
   const craftCount = craftCounts[selectedItem] || 0
   const availableTiers = getAvailableTiers(selectedItem, craftCount)
-  const currentTierInfo = getTierInfo(selectedItem, selectedTier)
+  
+  // Use lowest tier for minimum cost calculation, but actual tier will be determined at craft time
+  const lowestTierInfo = getTierInfo(selectedItem, 1)
   
   const itemDef = ITEM_DEFINITIONS[selectedItem]
   const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
-  const estimatedCraftTime = calculateCraftTime(selectedItem, selectedTier, selectedCraftLevel, speedMultiplier)
+  
+  // Estimate craft time using an average tier for display purposes
+  const avgTier = Math.ceil(availableTiers.length / 2)
+  const estimatedCraftTime = calculateCraftTime(selectedItem, avgTier, selectedCraftLevel, speedMultiplier)
   
   const totalTraits = Object.values(traitValues).reduce((sum, val) => sum + val, 0)
   const quality = getQualityInfo(totalTraits)
-  const meetsMinimum = totalTraits >= currentTierInfo.minResourceCost
+  const meetsMinimum = totalTraits >= lowestTierInfo.minResourceCost
   const canCraft = totalTraits <= resources && meetsMinimum
 
   return (
@@ -259,42 +255,6 @@ export function CraftingPanel({
 
       <Separator className="my-4" />
 
-      {availableTiers.length > 1 && (
-        <>
-          <div className="space-y-3 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
-                <Sparkle size={16} />
-                Item Tier
-              </span>
-              <Badge variant="default">
-                {currentTierInfo.name}
-              </Badge>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {availableTiers.map(tier => {
-                const tierInfo = getTierInfo(selectedItem, tier)
-                return (
-                  <Button
-                    key={tier}
-                    variant={selectedTier === tier ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedTier(tier)}
-                    className="flex-1 min-w-[80px]"
-                  >
-                    {tierInfo.name}
-                  </Button>
-                )
-              })}
-            </div>
-            <div className="text-xs text-muted-foreground text-center">
-              Min cost: {currentTierInfo.minResourceCost} · Value: ×{currentTierInfo.valueMultiplier.toFixed(1)}
-            </div>
-          </div>
-          <Separator className="my-4" />
-        </>
-      )}
-
       {currentMaxLevel > 1 && (
         <>
           <div className="space-y-3 mb-4">
@@ -321,11 +281,23 @@ export function CraftingPanel({
               ))}
             </div>
             <div className="text-xs text-muted-foreground text-center">
-              Craft time: {(estimatedCraftTime / 1000).toFixed(1)}s · Quality: <span className={quality.color}>{quality.label}</span>
+              Craft time: ~{(estimatedCraftTime / 1000).toFixed(1)}s · Quality: <span className={quality.color}>{quality.label}</span>
             </div>
           </div>
           <Separator className="my-4" />
         </>
+      )}
+
+      {availableTiers.length > 1 && (
+        <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Sparkle size={16} className="text-primary" />
+            <span>
+              Item tier will be determined by your resource allocation. 
+              {availableTiers.length > 1 && ` Unlocked tiers: ${availableTiers.map(t => getTierInfo(selectedItem, t).name).join(', ')}`}
+            </span>
+          </div>
+        </div>
       )}
 
       <div className="space-y-4 mb-6">
@@ -339,7 +311,7 @@ export function CraftingPanel({
             </span>
             {!meetsMinimum && (
               <span className="text-xs text-destructive">
-                Min: {currentTierInfo.minResourceCost}
+                Min: {lowestTierInfo.minResourceCost}
               </span>
             )}
           </div>
@@ -377,7 +349,7 @@ export function CraftingPanel({
         size="lg"
       >
         <Hammer size={20} />
-        Craft {currentTierInfo.name} {ITEM_DEFINITIONS[selectedItem].name}
+        Craft {ITEM_DEFINITIONS[selectedItem].name}
       </Button>
 
       <div className="mt-4 text-sm text-muted-foreground">

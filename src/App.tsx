@@ -25,7 +25,7 @@ import {
   CRAFTING_SLOTS_UPGRADES,
   CUSTOMER_SPAWN_UPGRADES
 } from '@/lib/types'
-import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits, calculateCustomerLevel, getAvailableTiers, getTierInfo } from '@/lib/game-logic'
+import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits, calculateCustomerLevel, getAvailableTiers, getTierInfo, calculateItemTier } from '@/lib/game-logic'
 
 const INITIAL_STATE: GameState = {
   resources: 100,
@@ -189,14 +189,16 @@ function App() {
     return () => clearInterval(interval)
   }, [gameState, customers.length, setGameState])
 
-  const handleCraft = useCallback((itemType: ItemType, traits: Traits, craftLevel?: number, craftTier?: number) => {
+  const handleCraft = useCallback((itemType: ItemType, traits: Traits, craftLevel?: number) => {
     setGameState(prev => {
       if (!prev) return INITIAL_STATE
 
       const totalCost = Object.values(traits).reduce((sum, val) => sum + val, 0)
       
       const craftCount = prev.craftCounts[itemType] || 0
-      const tier = craftTier || 1
+      
+      // Calculate tier automatically based on resources and craft count
+      const tier = calculateItemTier(itemType, traits, craftCount)
       const tierInfo = getTierInfo(itemType, tier)
       
       if (totalCost < tierInfo.minResourceCost) {
@@ -462,10 +464,8 @@ function App() {
       if (!prev) return INITIAL_STATE
 
       const craftCount = prev.craftCounts[customer.itemType] || 0
-      const availableTiers = getAvailableTiers(customer.itemType, craftCount)
-      const tier = availableTiers[availableTiers.length - 1] || 1
 
-      const { traits, totalCost } = calculateOptimalTraits(customer, prev.resources, customer.itemType, tier)
+      const { traits, totalCost } = calculateOptimalTraits(customer, prev.resources, customer.itemType, craftCount)
 
       if (totalCost > prev.resources) {
         toast.error('Not enough resources!')
@@ -482,6 +482,9 @@ function App() {
         return prev
       }
 
+      // Calculate tier automatically based on resource allocation
+      const tier = calculateItemTier(customer.itemType, traits, craftCount)
+      
       const level = getItemLevel(craftCount)
       const itemDef = ITEM_DEFINITIONS[customer.itemType]
       const tierInfo = getTierInfo(customer.itemType, tier)

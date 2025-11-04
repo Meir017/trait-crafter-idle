@@ -212,9 +212,10 @@ export function calculateOptimalTraits(
   customer: Customer,
   availableResources: number,
   itemType: ItemType,
-  tier: number
+  craftCount: number = 0
 ): { traits: Record<TraitType, number>; totalCost: number } {
-  const tierInfo = getTierInfo(itemType, tier)
+  // Use tier 1 as baseline for minimum cost, actual tier will be calculated at craft time
+  const tierInfo = getTierInfo(itemType, 1)
   const preferredTrait = customer.preferredTrait
   const minValue = isFinite(customer.minTraitValue) && customer.minTraitValue > 0 
     ? customer.minTraitValue 
@@ -320,4 +321,152 @@ export function getQualityInfo(totalTraits: number): {
     badgeVariant: 'outline',
     bgGradient: 'bg-card'
   }
+}
+
+/**
+ * Resource weights define how much each trait contributes to tier quality
+ * Different item types value different traits more highly
+ */
+const RESOURCE_WEIGHTS: Record<ItemType, Record<TraitType, number>> = {
+  sword: {
+    quality: 1.2,   // Swords value quality highly
+    speed: 1.0,     
+    durability: 1.3, // Durability is very important for swords
+    style: 0.8      
+  },
+  potion: {
+    quality: 1.5,   // Potions depend heavily on quality
+    speed: 0.7,     
+    durability: 0.6,
+    style: 1.1      
+  },
+  armor: {
+    quality: 1.1,   
+    speed: 0.6,     
+    durability: 1.5, // Armor prioritizes durability
+    style: 0.9      
+  },
+  ring: {
+    quality: 1.3,   
+    speed: 0.9,     
+    durability: 0.8,
+    style: 1.4      // Rings value style/aesthetics
+  },
+  bow: {
+    quality: 1.2,   
+    speed: 1.4,     // Bows benefit from speed
+    durability: 1.0,
+    style: 0.9      
+  }
+}
+
+/**
+ * Calculates the weighted quality score based on trait allocation
+ * Different items benefit more from certain trait combinations
+ */
+export function calculateWeightedQuality(
+  itemType: ItemType,
+  traits: Record<TraitType, number>
+): number {
+  const weights = RESOURCE_WEIGHTS[itemType]
+  let weightedSum = 0
+  
+  for (const trait of Object.keys(traits) as TraitType[]) {
+    const traitValue = isFinite(traits[trait]) && traits[trait] >= 0 ? traits[trait] : 0
+    const weight = weights[trait] || 1.0
+    weightedSum += traitValue * weight
+  }
+  
+  return weightedSum
+}
+
+/**
+ * Determines the tier of a crafted item based on resources used
+ * This is pseudo-random with bias towards better tiers when more/better resources are used
+ * 
+ * @param itemType The type of item being crafted
+ * @param traits The trait allocation used in crafting
+ * @param craftCount How many of this item have been crafted (affects tier unlocks)
+ * @returns The tier number (1-5)
+ */
+export function calculateItemTier(
+  itemType: ItemType,
+  traits: Record<TraitType, number>,
+  craftCount: number
+): number {
+  const itemDef = ITEM_DEFINITIONS[itemType]
+  const availableTiers = itemDef.tiers.filter(tier => craftCount >= tier.unlockAt)
+  
+  if (availableTiers.length === 0) return 1
+  
+  // Calculate total resources used and weighted quality
+  const totalResources = Object.values(traits).reduce((sum, val) => {
+    const safeVal = isFinite(val) && val >= 0 ? val : 0
+    return sum + safeVal
+  }, 0)
+  
+  const weightedQuality = calculateWeightedQuality(itemType, traits)
+  
+  // Determine tier probabilities based on resources used
+  const tierProbabilities: { tier: number; probability: number }[] = []
+  
+  for (const tierInfo of availableTiers) {
+    const minCost = tierInfo.minResourceCost
+    
+    // Base probability increases with tier unlocks
+    let baseProbability = 0.2
+    
+    // If we meet minimum cost, increase probability
+    if (totalResources >= minCost) {
+      // Calculate how much over minimum we are
+      const excessRatio = Math.min(2.0, (totalResources - minCost) / minCost)
+      
+      // Calculate weighted quality ratio
+      const weightedRatio = weightedQuality / totalResources
+      
+      // Higher tiers are more likely when:
+      // 1. More resources are used
+      // 2. Resources are well-allocated for this item type
+      const tierBonus = (tierInfo.tier - 1) * 0.15
+      const resourceBonus = excessRatio * 0.3
+      const qualityBonus = (weightedRatio - 1.0) * 0.2
+      
+      baseProbability = 0.3 + tierBonus + resourceBonus + qualityBonus
+    } else {
+      // Below minimum cost, very low probability
+      baseProbability = 0.05 * (totalResources / minCost)
+    }
+    
+    tierProbabilities.push({
+      tier: tierInfo.tier,
+      probability: Math.max(0, baseProbability)
+    })
+  }
+  
+  // Normalize probabilities
+  const totalProbability = tierProbabilities.reduce((sum, tp) => sum + tp.probability, 0)
+  
+  if (totalProbability === 0) {
+    // Fall back to lowest tier if no valid probabilities
+    return availableTiers[0].tier
+  }
+  
+  const normalizedProbabilities = tierProbabilities.map(tp => ({
+    tier: tp.tier,
+    probability: tp.probability / totalProbability
+  }))
+  
+  // Select tier based on probabilities (pseudo-random)
+  const random = Math.random()
+  let cumulativeProbability = 0
+  
+  for (const tp of normalizedProbabilities) {
+    cumulativeProbability += tp.probability
+    if (random <= cumulativeProbability) {
+      return tp.tier
+    }
+  }
+  
+  // Fallback to highest available tier
+  return availableTiers[availableTiers.length - 1].tier
 }
