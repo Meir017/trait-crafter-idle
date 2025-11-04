@@ -151,165 +151,178 @@ function App() {
   }, [gameState?.craftCounts])
 
   const handleCraft = useCallback((itemType: ItemType, traits: Traits) => {
-    if (!gameState) return
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
 
-    const totalCost = Object.values(traits).reduce((sum, val) => sum + val, 0)
-    
-    if (totalCost > gameState.resources) {
-      toast.error('Not enough resources!')
-      return
-    }
+      const totalCost = Object.values(traits).reduce((sum, val) => sum + val, 0)
+      
+      if (totalCost > prev.resources) {
+        toast.error('Not enough resources!')
+        return prev
+      }
 
-    if (gameState.inventory.length + gameState.craftingQueue.length >= gameState.maxInventorySlots) {
-      toast.error('Inventory and queue are full!')
-      return
-    }
+      if (prev.inventory.length + prev.craftingQueue.length >= prev.maxInventorySlots) {
+        toast.error('Inventory and queue are full!')
+        return prev
+      }
 
-    const craftCount = gameState.craftCounts[itemType] || 0
-    const level = getItemLevel(craftCount)
-    const itemDef = ITEM_DEFINITIONS[itemType]
-    
-    const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === gameState.craftSpeedUpgradeLevel)
-    const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
-    
-    const craftTime = calculateCraftTime(itemDef.baseCraftTime, level, speedMultiplier)
+      const craftCount = prev.craftCounts[itemType] || 0
+      const level = getItemLevel(craftCount)
+      const itemDef = ITEM_DEFINITIONS[itemType]
+      
+      const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === prev.craftSpeedUpgradeLevel)
+      const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
+      
+      const craftTime = calculateCraftTime(itemDef.baseCraftTime, level, speedMultiplier)
 
-    const newJob: CraftingJob = {
-      id: `job-${Date.now()}-${Math.random()}`,
-      type: itemType,
-      traits,
-      startTime: Date.now(),
-      duration: craftTime,
-      level
-    }
+      const newJob: CraftingJob = {
+        id: `job-${Date.now()}-${Math.random()}`,
+        type: itemType,
+        traits,
+        startTime: Date.now(),
+        duration: craftTime,
+        level
+      }
 
-    setGameState(prev => ({
-      ...prev!,
-      resources: prev!.resources - totalCost,
-      craftingQueue: [...prev!.craftingQueue, newJob],
-      lastUpdate: Date.now()
-    }))
+      toast.success(`Started crafting ${itemDef.name}! (${(craftTime / 1000).toFixed(1)}s)`)
 
-    toast.success(`Started crafting ${itemDef.name}! (${(craftTime / 1000).toFixed(1)}s)`)
-  }, [gameState, setGameState])
+      return {
+        ...prev,
+        resources: prev.resources - totalCost,
+        craftingQueue: [...prev.craftingQueue, newJob],
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
 
   const handleSell = useCallback((customerId: string, itemId: string) => {
-    if (!gameState) return
-
     const customer = customers.find(c => c.id === customerId)
-    const item = gameState.inventory.find(i => i.id === itemId)
+    if (!customer) return
 
-    if (!customer || !item) return
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
 
-    const value = calculateItemValue(
-      ITEM_DEFINITIONS[item.type].baseValue,
-      item.traits,
-      customer.preferredTrait
-    )
+      const item = prev.inventory.find(i => i.id === itemId)
+      if (!item) return prev
 
-    const bonus = item.traits[customer.preferredTrait] >= customer.minTraitValue * 1.5 ? 
-      Math.floor(customer.reward * 0.5) : 0
+      const value = calculateItemValue(
+        ITEM_DEFINITIONS[item.type].baseValue,
+        item.traits,
+        customer.preferredTrait
+      )
 
-    const totalReward = customer.reward + bonus
+      const bonus = item.traits[customer.preferredTrait] >= customer.minTraitValue * 1.5 ? 
+        Math.floor(customer.reward * 0.5) : 0
 
-    setGameState(prev => ({
-      ...prev!,
-      coins: prev!.coins + totalReward,
-      inventory: prev!.inventory.filter(i => i.id !== itemId),
-      lastUpdate: Date.now()
-    }))
+      const totalReward = customer.reward + bonus
 
-    setCustomers(prev => prev.filter(c => c.id !== customerId))
+      setCustomers(prevCustomers => prevCustomers.filter(c => c.id !== customerId))
 
-    if (bonus > 0) {
-      toast.success(`Sold to ${customer.name} for ${totalReward} coins! (+${bonus} bonus!)`)
-    } else {
-      toast.success(`Sold to ${customer.name} for ${totalReward} coins!`)
-    }
-  }, [gameState, customers, setGameState])
+      if (bonus > 0) {
+        toast.success(`Sold to ${customer.name} for ${totalReward} coins! (+${bonus} bonus!)`)
+      } else {
+        toast.success(`Sold to ${customer.name} for ${totalReward} coins!`)
+      }
+
+      return {
+        ...prev,
+        coins: prev.coins + totalReward,
+        inventory: prev.inventory.filter(i => i.id !== itemId),
+        lastUpdate: Date.now()
+      }
+    })
+  }, [customers, setGameState])
 
   const handleUpgradeResources = useCallback(() => {
-    if (!gameState) return
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
 
-    const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === gameState.resourceUpgradeLevel + 1)
-    
-    if (!nextUpgrade || gameState.coins < nextUpgrade.cost) {
-      toast.error('Not enough coins!')
-      return
-    }
+      const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === prev.resourceUpgradeLevel + 1)
+      
+      if (!nextUpgrade || prev.coins < nextUpgrade.cost) {
+        toast.error('Not enough coins!')
+        return prev
+      }
 
-    setGameState(prev => ({
-      ...prev!,
-      coins: prev!.coins - nextUpgrade.cost,
-      resourceRegenRate: nextUpgrade.regenRate,
-      resourceUpgradeLevel: nextUpgrade.level,
-      lastUpdate: Date.now()
-    }))
+      toast.success(`Resource production upgraded to level ${nextUpgrade.level}! (+${nextUpgrade.regenRate}/s)`)
 
-    toast.success(`Resource production upgraded to level ${nextUpgrade.level}! (+${nextUpgrade.regenRate}/s)`)
-  }, [gameState, setGameState])
+      return {
+        ...prev,
+        coins: prev.coins - nextUpgrade.cost,
+        resourceRegenRate: nextUpgrade.regenRate,
+        resourceUpgradeLevel: nextUpgrade.level,
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
 
   const handleUpgradeCapacity = useCallback(() => {
-    if (!gameState) return
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
 
-    const nextUpgrade = CAPACITY_UPGRADES.find(u => u.level === gameState.capacityUpgradeLevel + 1)
-    
-    if (!nextUpgrade || gameState.coins < nextUpgrade.cost) {
-      toast.error('Not enough coins!')
-      return
-    }
+      const nextUpgrade = CAPACITY_UPGRADES.find(u => u.level === prev.capacityUpgradeLevel + 1)
+      
+      if (!nextUpgrade || prev.coins < nextUpgrade.cost) {
+        toast.error('Not enough coins!')
+        return prev
+      }
 
-    setGameState(prev => ({
-      ...prev!,
-      coins: prev!.coins - nextUpgrade.cost,
-      maxResources: nextUpgrade.maxResources,
-      capacityUpgradeLevel: nextUpgrade.level,
-      lastUpdate: Date.now()
-    }))
+      toast.success(`Resource capacity upgraded to level ${nextUpgrade.level}! (${nextUpgrade.maxResources} max)`)
 
-    toast.success(`Resource capacity upgraded to level ${nextUpgrade.level}! (${nextUpgrade.maxResources} max)`)
-  }, [gameState, setGameState])
+      return {
+        ...prev,
+        coins: prev.coins - nextUpgrade.cost,
+        maxResources: nextUpgrade.maxResources,
+        capacityUpgradeLevel: nextUpgrade.level,
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
 
   const handleUpgradeCraftSpeed = useCallback(() => {
-    if (!gameState) return
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
 
-    const nextUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === gameState.craftSpeedUpgradeLevel + 1)
-    
-    if (!nextUpgrade || gameState.coins < nextUpgrade.cost) {
-      toast.error('Not enough coins!')
-      return
-    }
+      const nextUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === prev.craftSpeedUpgradeLevel + 1)
+      
+      if (!nextUpgrade || prev.coins < nextUpgrade.cost) {
+        toast.error('Not enough coins!')
+        return prev
+      }
 
-    setGameState(prev => ({
-      ...prev!,
-      coins: prev!.coins - nextUpgrade.cost,
-      craftSpeedUpgradeLevel: nextUpgrade.level,
-      lastUpdate: Date.now()
-    }))
+      toast.success(`Craft speed upgraded to level ${nextUpgrade.level}! (${Math.round((1 - nextUpgrade.speedMultiplier) * 100)}% faster)`)
 
-    toast.success(`Craft speed upgraded to level ${nextUpgrade.level}! (${Math.round((1 - nextUpgrade.speedMultiplier) * 100)}% faster)`)
-  }, [gameState, setGameState])
+      return {
+        ...prev,
+        coins: prev.coins - nextUpgrade.cost,
+        craftSpeedUpgradeLevel: nextUpgrade.level,
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
 
   const handleUpgradeInventory = useCallback(() => {
-    if (!gameState) return
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
 
-    const nextUpgrade = INVENTORY_UPGRADES.find(u => u.level === gameState.inventoryUpgradeLevel + 1)
-    
-    if (!nextUpgrade || gameState.coins < nextUpgrade.cost) {
-      toast.error('Not enough coins!')
-      return
-    }
+      const nextUpgrade = INVENTORY_UPGRADES.find(u => u.level === prev.inventoryUpgradeLevel + 1)
+      
+      if (!nextUpgrade || prev.coins < nextUpgrade.cost) {
+        toast.error('Not enough coins!')
+        return prev
+      }
 
-    setGameState(prev => ({
-      ...prev!,
-      coins: prev!.coins - nextUpgrade.cost,
-      maxInventorySlots: nextUpgrade.maxSlots,
-      inventoryUpgradeLevel: nextUpgrade.level,
-      lastUpdate: Date.now()
-    }))
+      toast.success(`Inventory upgraded to level ${nextUpgrade.level}! (${nextUpgrade.maxSlots} slots)`)
 
-    toast.success(`Inventory upgraded to level ${nextUpgrade.level}! (${nextUpgrade.maxSlots} slots)`)
-  }, [gameState, setGameState])
+      return {
+        ...prev,
+        coins: prev.coins - nextUpgrade.cost,
+        maxInventorySlots: nextUpgrade.maxSlots,
+        inventoryUpgradeLevel: nextUpgrade.level,
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
 
   if (!gameState) {
     return (
