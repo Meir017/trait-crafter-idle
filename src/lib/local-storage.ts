@@ -1,10 +1,15 @@
 /**
  * Local storage utility with hash-based security to prevent cheating
  * The hash is calculated from the data and a secret salt to verify integrity
+ * 
+ * NOTE: This is client-side security, so the salt is visible in the JavaScript bundle.
+ * The goal is to make casual cheating more difficult, not to provide cryptographic security.
+ * For true security, validation should be done server-side.
  */
 
 const STORAGE_PREFIX = 'trait-crafter-'
-const SECRET_SALT = 'mystic-forge-2024' // Secret salt for hashing
+// Secret salt for hashing - visible in client code but makes casual tampering harder
+const SECRET_SALT = 'mystic-forge-2024'
 
 /**
  * Simple hash function using the Web Crypto API

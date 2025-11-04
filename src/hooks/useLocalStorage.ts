@@ -12,8 +12,8 @@ import { saveToLocalStorage, loadFromLocalStorage, removeFromLocalStorage } from
 export function useLocalStorage<T>(
   key: string,
   initialValue: T
-): readonly [T | undefined, (newValue: T | ((oldValue?: T) => T)) => void, () => void] {
-  const [value, setValue] = useState<T | undefined>(initialValue)
+): readonly [T, (newValue: T | ((oldValue: T) => T)) => void, () => void] {
+  const [value, setValue] = useState<T>(initialValue)
   const [isLoaded, setIsLoaded] = useState(false)
 
   // Load the initial value from local storage
@@ -31,7 +31,7 @@ export function useLocalStorage<T>(
 
   // Setter function that updates both state and local storage
   const setStoredValue = useCallback(
-    (newValue: T | ((oldValue?: T) => T)) => {
+    (newValue: T | ((oldValue: T) => T)) => {
       setValue(prevValue => {
         const valueToStore = newValue instanceof Function ? newValue(prevValue) : newValue
         
