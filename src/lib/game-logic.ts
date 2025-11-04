@@ -2,7 +2,14 @@ import { ItemType, TraitType, ITEM_DEFINITIONS, CUSTOMER_NAMES, Customer, Custom
 
 export function getUnlockedItemTypes(craftCounts: Record<ItemType, number>): ItemType[] {
   const allItemTypes: ItemType[] = ['sword', 'potion', 'armor', 'ring', 'bow']
-  return allItemTypes.filter(itemType => craftCounts[itemType] > 0)
+  return allItemTypes.filter(itemType => {
+    const itemDef = ITEM_DEFINITIONS[itemType]
+    if (!itemDef.unlockRequirement) return true
+    
+    const requiredItemType = itemDef.unlockRequirement.itemType
+    const requiredCount = itemDef.unlockRequirement.count
+    return craftCounts[requiredItemType] >= requiredCount
+  })
 }
 
 export function calculateCustomerLevel(experience: number): { level: number; experienceToNext: number } {
