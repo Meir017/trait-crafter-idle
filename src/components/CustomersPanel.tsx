@@ -47,7 +47,7 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
         {customers.map(customer => {
           const elapsed = timeNow - customer.arrivedAt
           const remaining = Math.max(0, customer.patience - elapsed)
-          const patiencePercent = (remaining / customer.maxPatience) * 100
+          const patiencePercent = customer.maxPatience > 0 ? (remaining / customer.maxPatience) * 100 : 0
           const isUrgent = patiencePercent < 30
 
           const matchingItems = inventory.filter(item => item.type === customer.itemType)
@@ -79,7 +79,7 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
           }
           const canAffordOptimal = resources >= optimalCost
 
-          const expPercent = (customer.experience / customer.experienceToNextLevel) * 100
+          const expPercent = customer.experienceToNextLevel > 0 ? (customer.experience / customer.experienceToNextLevel) * 100 : 0
 
           return (
             <Card 

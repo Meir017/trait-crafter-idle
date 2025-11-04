@@ -53,7 +53,7 @@ export function ResourcePanel({
     return () => clearInterval(interval)
   }, [])
 
-  const percentage = (resources / maxResources) * 100
+  const percentage = maxResources > 0 ? (resources / maxResources) * 100 : 0
   const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === resourceUpgradeLevel + 1)
   const canUpgrade = nextUpgrade && coins >= nextUpgrade.cost
   
@@ -75,7 +75,7 @@ export function ResourcePanel({
   const timeUntilNextCustomer = Math.max(0, nextCustomerArrival - timeNow)
   const currentSpawnUpgrade = CUSTOMER_SPAWN_UPGRADES.find(u => u.level === customerSpawnUpgradeLevel)
   const maxSpawnTime = currentSpawnUpgrade?.maxTime || 40000
-  const customerArrivalPercent = Math.max(0, 100 - (timeUntilNextCustomer / maxSpawnTime) * 100)
+  const customerArrivalPercent = maxSpawnTime > 0 ? Math.max(0, 100 - (timeUntilNextCustomer / maxSpawnTime) * 100) : 0
 
   return (
     <Card className="p-6">

@@ -73,7 +73,7 @@ export function CraftingPanel({
         let remainingToReduce = diff
         
         otherTraits.forEach(t => {
-          const proportion = prev[t] / totalOthers
+          const proportion = totalOthers > 0 ? prev[t] / totalOthers : 0
           const reduction = Math.min(prev[t], Math.round(diff * proportion))
           updated[t] = prev[t] - reduction
           remainingToReduce -= reduction
@@ -140,7 +140,7 @@ export function CraftingPanel({
           {craftingQueue.slice(0, maxCraftingSlots).map((job, index) => {
             const now = Date.now()
             const elapsed = now - job.startTime
-            const progress = Math.min(100, (elapsed / job.duration) * 100)
+            const progress = job.duration > 0 ? Math.min(100, (elapsed / job.duration) * 100) : 100
             const remaining = Math.max(0, (job.duration - elapsed) / 1000)
             const itemDef = ITEM_DEFINITIONS[job.type]
             
@@ -176,7 +176,7 @@ export function CraftingPanel({
           
           const unlockReq = def.unlockRequirement
           const isLocked = unlockReq && (craftCounts[unlockReq.itemType] || 0) < unlockReq.count
-          const unlockProgress = unlockReq ? Math.min(100, ((craftCounts[unlockReq.itemType] || 0) / unlockReq.count) * 100) : 100
+          const unlockProgress = unlockReq && unlockReq.count > 0 ? Math.min(100, ((craftCounts[unlockReq.itemType] || 0) / unlockReq.count) * 100) : 100
 
           return (
             <button
