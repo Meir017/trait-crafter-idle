@@ -4,16 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { User, ShoppingBag } from '@phosphor-icons/react'
+import { User, ShoppingBag, Hammer } from '@phosphor-icons/react'
 import { Customer, CraftedItem, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
 
 interface CustomersPanelProps {
   customers: Customer[]
   inventory: CraftedItem[]
+  resources: number
   onSell: (customerId: string, itemId: string) => void
+  onCraftForCustomer: (customer: Customer) => void
 }
 
-export function CustomersPanel({ customers, inventory, onSell }: CustomersPanelProps) {
+export function CustomersPanel({ customers, inventory, resources, onSell, onCraftForCustomer }: CustomersPanelProps) {
   const [timeNow, setTimeNow] = useState(Date.now())
 
   useEffect(() => {
@@ -56,6 +58,9 @@ export function CustomersPanel({ customers, inventory, onSell }: CustomersPanelP
           }, null)
 
           const canSell = bestItem && bestItem.traits[customer.preferredTrait] >= customer.minTraitValue
+
+          const optimalCost = customer.minTraitValue * 1.5
+          const canAffordOptimal = resources >= optimalCost
 
           return (
             <Card 
@@ -109,9 +114,23 @@ export function CustomersPanel({ customers, inventory, onSell }: CustomersPanelP
                   </div>
 
                   {matchingItems.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">
-                      No suitable items in stock
-                    </p>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => onCraftForCustomer(customer)}
+                        size="sm"
+                        className="w-full"
+                        variant="secondary"
+                        disabled={!canAffordOptimal}
+                      >
+                        <Hammer size={16} />
+                        Craft Optimal ({Math.floor(optimalCost)} 🪵)
+                      </Button>
+                      {!canAffordOptimal && (
+                        <p className="text-xs text-muted-foreground italic text-center">
+                          Need {Math.floor(optimalCost - resources)} more resources
+                        </p>
+                      )}
+                    </div>
                   ) : canSell ? (
                     <Button
                       onClick={() => onSell(customer.id, bestItem.id)}
@@ -123,9 +142,21 @@ export function CustomersPanel({ customers, inventory, onSell }: CustomersPanelP
                       Sell ({bestItem.traits[customer.preferredTrait]} {TRAIT_INFO[customer.preferredTrait].icon})
                     </Button>
                   ) : (
-                    <p className="text-xs text-muted-foreground italic">
-                      Items don't meet requirements
-                    </p>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => onCraftForCustomer(customer)}
+                        size="sm"
+                        className="w-full"
+                        variant="secondary"
+                        disabled={!canAffordOptimal}
+                      >
+                        <Hammer size={16} />
+                        Craft Optimal ({Math.floor(optimalCost)} 🪵)
+                      </Button>
+                      <p className="text-xs text-muted-foreground italic text-center">
+                        Current items don't meet requirements
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

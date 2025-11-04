@@ -86,3 +86,36 @@ export function calculateCraftTime(
   const levelBonus = Math.max(0.5, 1 - (itemLevel - 1) * 0.1)
   return Math.floor(baseTime * speedMultiplier * levelBonus)
 }
+
+export function calculateOptimalTraits(
+  customer: Customer,
+  availableResources: number
+): { traits: Record<TraitType, number>; totalCost: number } {
+  const preferredTrait = customer.preferredTrait
+  const minValue = customer.minTraitValue
+  
+  const primaryAmount = Math.floor(minValue * 1.5)
+  
+  const remainingResources = availableResources - primaryAmount
+  const allTraits: TraitType[] = ['quality', 'speed', 'durability', 'style']
+  const otherTraits = allTraits.filter(t => t !== preferredTrait)
+  
+  const perOtherTrait = Math.max(0, Math.floor(remainingResources / otherTraits.length))
+  
+  const traits: Record<TraitType, number> = {
+    quality: 0,
+    speed: 0,
+    durability: 0,
+    style: 0
+  }
+  
+  traits[preferredTrait] = primaryAmount
+  
+  otherTraits.forEach(trait => {
+    traits[trait] = perOtherTrait
+  })
+  
+  const totalCost = Object.values(traits).reduce((sum, val) => sum + val, 0)
+  
+  return { traits, totalCost }
+}

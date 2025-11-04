@@ -22,7 +22,7 @@ import {
   CRAFT_SPEED_UPGRADES,
   INVENTORY_UPGRADES
 } from '@/lib/types'
-import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime } from '@/lib/game-logic'
+import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits } from '@/lib/game-logic'
 
 const INITIAL_STATE: GameState = {
   resources: 100,
@@ -324,6 +324,51 @@ function App() {
     })
   }, [setGameState])
 
+  const handleCraftForCustomer = useCallback((customer: Customer) => {
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
+
+      const { traits, totalCost } = calculateOptimalTraits(customer, prev.resources)
+
+      if (totalCost > prev.resources) {
+        toast.error('Not enough resources!')
+        return prev
+      }
+
+      if (prev.inventory.length + prev.craftingQueue.length >= prev.maxInventorySlots) {
+        toast.error('Inventory and queue are full!')
+        return prev
+      }
+
+      const craftCount = prev.craftCounts[customer.itemType] || 0
+      const level = getItemLevel(craftCount)
+      const itemDef = ITEM_DEFINITIONS[customer.itemType]
+      
+      const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === prev.craftSpeedUpgradeLevel)
+      const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
+      
+      const craftTime = calculateCraftTime(itemDef.baseCraftTime, level, speedMultiplier)
+
+      const newJob: CraftingJob = {
+        id: `job-${Date.now()}-${Math.random()}`,
+        type: customer.itemType,
+        traits,
+        startTime: Date.now(),
+        duration: craftTime,
+        level
+      }
+
+      toast.success(`Crafting optimal ${itemDef.name} for ${customer.name}! (${(craftTime / 1000).toFixed(1)}s)`)
+
+      return {
+        ...prev,
+        resources: prev.resources - totalCost,
+        craftingQueue: [...prev.craftingQueue, newJob],
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
+
   if (!gameState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -378,7 +423,9 @@ function App() {
             <CustomersPanel
               customers={customers}
               inventory={gameState.inventory}
+              resources={gameState.resources}
               onSell={handleSell}
+              onCraftForCustomer={handleCraftForCustomer}
             />
           </div>
         </div>
