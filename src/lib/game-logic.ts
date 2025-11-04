@@ -13,11 +13,15 @@ export function getUnlockedItemTypes(craftCounts: Record<ItemType, number>): Ite
 }
 
 export function calculateCustomerLevel(experience: number): { level: number; experienceToNext: number } {
+  if (!isFinite(experience) || experience < 0) {
+    experience = 0
+  }
+  
   let level = 1
   let totalExpNeeded = 0
   let expForNextLevel = 100
   
-  while (experience >= totalExpNeeded + expForNextLevel) {
+  while (experience >= totalExpNeeded + expForNextLevel && level < 100) {
     totalExpNeeded += expForNextLevel
     level++
     expForNextLevel = Math.floor(100 * Math.pow(1.5, level - 1))
@@ -25,7 +29,7 @@ export function calculateCustomerLevel(experience: number): { level: number; exp
   
   return {
     level,
-    experienceToNext: expForNextLevel
+    experienceToNext: Math.max(1, expForNextLevel)
   }
 }
 
@@ -99,7 +103,7 @@ export function generateCustomer(
   const traitMultiplier = 1 + minTraitValue / 50
   const secondaryBonus = secondaryTraits ? Object.keys(secondaryTraits).length * 0.3 : 0
   
-  const reward = Math.floor(baseReward * levelMultiplier * traitMultiplier * (1 + secondaryBonus))
+  const reward = Math.max(1, Math.floor(baseReward * levelMultiplier * traitMultiplier * (1 + secondaryBonus)))
   
   return {
     id: `customer-${Date.now()}-${Math.random()}`,
@@ -123,14 +127,23 @@ export function calculateItemValue(
   traits: Record<TraitType, number>,
   preferredTrait?: TraitType
 ): number {
-  const totalTraits = Object.values(traits).reduce((sum, val) => sum + val, 0)
+  if (!isFinite(baseValue) || baseValue < 0) baseValue = 0
+  
+  const totalTraits = Object.values(traits).reduce((sum, val) => {
+    const safeVal = isFinite(val) && val >= 0 ? val : 0
+    return sum + safeVal
+  }, 0)
+  
   let value = baseValue + totalTraits * 0.5
   
   if (preferredTrait && traits[preferredTrait]) {
-    value += traits[preferredTrait] * 0.3
+    const traitVal = isFinite(traits[preferredTrait]) && traits[preferredTrait] >= 0 
+      ? traits[preferredTrait] 
+      : 0
+    value += traitVal * 0.3
   }
   
-  return Math.floor(value)
+  return Math.max(0, Math.floor(value))
 }
 
 export function getItemLevel(craftCount: number): number {
@@ -163,8 +176,13 @@ export function calculateCraftTime(
   itemLevel: number,
   speedMultiplier: number
 ): number {
+  if (!isFinite(baseTime) || baseTime <= 0) baseTime = 1000
+  if (!isFinite(itemLevel) || itemLevel < 1) itemLevel = 1
+  if (!isFinite(speedMultiplier) || speedMultiplier <= 0) speedMultiplier = 1
+  
   const levelBonus = Math.max(0.5, 1 - (itemLevel - 1) * 0.1)
-  return Math.floor(baseTime * speedMultiplier * levelBonus)
+  const result = Math.floor(baseTime * speedMultiplier * levelBonus)
+  return Math.max(100, result)
 }
 
 export function calculateOptimalTraits(
@@ -172,7 +190,13 @@ export function calculateOptimalTraits(
   availableResources: number
 ): { traits: Record<TraitType, number>; totalCost: number } {
   const preferredTrait = customer.preferredTrait
-  const minValue = customer.minTraitValue
+  const minValue = isFinite(customer.minTraitValue) && customer.minTraitValue > 0 
+    ? customer.minTraitValue 
+    : 20
+  
+  if (!isFinite(availableResources) || availableResources < 0) {
+    availableResources = 0
+  }
   
   let primaryAmount = Math.floor(minValue * 1.5)
   
@@ -190,13 +214,14 @@ export function calculateOptimalTraits(
   if (customer.secondaryTraits) {
     for (const [trait, value] of Object.entries(customer.secondaryTraits)) {
       const traitKey = trait as TraitType
-      const requiredAmount = Math.floor(value * 1.2)
+      const safeValue = isFinite(value) && value > 0 ? value : 0
+      const requiredAmount = Math.floor(safeValue * 1.2)
       traits[traitKey] = requiredAmount
       totalCost += requiredAmount
     }
   }
   
-  const remainingResources = availableResources - totalCost
+  const remainingResources = Math.max(0, availableResources - totalCost)
   
   if (remainingResources > 0) {
     const allTraits: TraitType[] = ['quality', 'speed', 'durability', 'style']
@@ -213,5 +238,5 @@ export function calculateOptimalTraits(
     }
   }
   
-  return { traits, totalCost }
+  return { traits, totalCost: Math.max(0, totalCost) }
 }

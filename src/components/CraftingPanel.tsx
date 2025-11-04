@@ -140,8 +140,11 @@ export function CraftingPanel({
           {craftingQueue.slice(0, maxCraftingSlots).map((job, index) => {
             const now = Date.now()
             const elapsed = now - job.startTime
-            const progress = job.duration > 0 ? Math.min(100, (elapsed / job.duration) * 100) : 100
+            const progress = job.duration > 0 && isFinite(elapsed)
+              ? Math.max(0, Math.min(100, (elapsed / job.duration) * 100))
+              : 100
             const remaining = Math.max(0, (job.duration - elapsed) / 1000)
+            const remainingDisplay = isFinite(remaining) ? remaining : 0
             const itemDef = ITEM_DEFINITIONS[job.type]
             
             return (
@@ -153,7 +156,7 @@ export function CraftingPanel({
                     <Badge variant="default" className="text-xs px-1.5 py-0">Slot {index + 1}</Badge>
                   </div>
                   <span className="font-mono text-muted-foreground">
-                    {remaining.toFixed(1)}s
+                    {remainingDisplay.toFixed(1)}s
                   </span>
                 </div>
                 <Progress value={progress} className="h-1.5" />
@@ -176,7 +179,9 @@ export function CraftingPanel({
           
           const unlockReq = def.unlockRequirement
           const isLocked = unlockReq && (craftCounts[unlockReq.itemType] || 0) < unlockReq.count
-          const unlockProgress = unlockReq && unlockReq.count > 0 ? Math.min(100, ((craftCounts[unlockReq.itemType] || 0) / unlockReq.count) * 100) : 100
+          const unlockProgress = unlockReq && unlockReq.count > 0 
+            ? Math.max(0, Math.min(100, ((craftCounts[unlockReq.itemType] || 0) / unlockReq.count) * 100))
+            : 100
 
           return (
             <button

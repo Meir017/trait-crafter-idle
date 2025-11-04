@@ -45,7 +45,10 @@ export function InventoryPanel({ inventory, maxSlots, queueLength }: InventoryPa
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {inventory.map(item => {
           const def = ITEM_DEFINITIONS[item.type]
-          const totalTraits = Object.values(item.traits).reduce((sum, val) => sum + val, 0)
+          const totalTraits = Object.values(item.traits).reduce((sum, val) => {
+            const safeVal = isFinite(val) && val >= 0 ? val : 0
+            return sum + safeVal
+          }, 0)
           const quality = totalTraits > 200 ? 'legendary' : totalTraits > 150 ? 'rare' : totalTraits > 100 ? 'uncommon' : 'common'
           
           const borderColor = {
@@ -67,12 +70,15 @@ export function InventoryPanel({ inventory, maxSlots, queueLength }: InventoryPa
                   Lv {item.level}
                 </Badge>
                 <div className="grid grid-cols-2 gap-1 text-xs">
-                  {Object.entries(item.traits).map(([trait, value]) => (
-                    <div key={trait} className="flex items-center gap-1">
-                      <span>{TRAIT_INFO[trait as keyof typeof TRAIT_INFO].icon}</span>
-                      <span className="font-mono text-[10px]">{value}</span>
-                    </div>
-                  ))}
+                  {Object.entries(item.traits).map(([trait, value]) => {
+                    const safeValue = isFinite(value) && value >= 0 ? value : 0
+                    return (
+                      <div key={trait} className="flex items-center gap-1">
+                        <span>{TRAIT_INFO[trait as keyof typeof TRAIT_INFO].icon}</span>
+                        <span className="font-mono text-[10px]">{safeValue}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </Card>

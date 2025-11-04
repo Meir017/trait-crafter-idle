@@ -47,7 +47,9 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
         {customers.map(customer => {
           const elapsed = timeNow - customer.arrivedAt
           const remaining = Math.max(0, customer.patience - elapsed)
-          const patiencePercent = customer.maxPatience > 0 ? (remaining / customer.maxPatience) * 100 : 0
+          const patiencePercent = customer.maxPatience > 0 && isFinite(remaining)
+            ? Math.max(0, Math.min(100, (remaining / customer.maxPatience) * 100))
+            : 0
           const isUrgent = patiencePercent < 30
 
           const matchingItems = inventory.filter(item => item.type === customer.itemType)
@@ -73,13 +75,16 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
 
           const canSell = bestItem !== null
 
-          let optimalCost = customer.minTraitValue * 1.5
+          let optimalCost = (customer.minTraitValue || 0) * 1.5
           if (customer.secondaryTraits) {
-            optimalCost += Object.values(customer.secondaryTraits).reduce((sum, val) => sum + val * 1.2, 0)
+            optimalCost += Object.values(customer.secondaryTraits).reduce((sum, val) => sum + (val || 0) * 1.2, 0)
           }
+          optimalCost = isFinite(optimalCost) ? optimalCost : 0
           const canAffordOptimal = resources >= optimalCost
 
-          const expPercent = customer.experienceToNextLevel > 0 ? (customer.experience / customer.experienceToNextLevel) * 100 : 0
+          const expPercent = customer.experienceToNextLevel > 0 && isFinite(customer.experience)
+            ? Math.max(0, Math.min(100, (customer.experience / customer.experienceToNextLevel) * 100))
+            : 0
 
           return (
             <Card 

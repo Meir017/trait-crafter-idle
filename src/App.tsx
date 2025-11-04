@@ -65,14 +65,23 @@ function App() {
 
     const now = Date.now()
     const timeDiff = now - gameState.lastUpdate
-    const regenAmount = Math.floor((timeDiff / 1000) * gameState.resourceRegenRate)
+    const safeTimeDiff = isFinite(timeDiff) && timeDiff > 0 ? timeDiff : 0
+    const safeRegenRate = isFinite(gameState.resourceRegenRate) && gameState.resourceRegenRate > 0 
+      ? gameState.resourceRegenRate 
+      : 1
+    const regenAmount = Math.floor((safeTimeDiff / 1000) * safeRegenRate)
     
     if (regenAmount > 0) {
-      setGameState(prev => ({
-        ...prev!,
-        resources: Math.min(prev!.maxResources, prev!.resources + regenAmount),
-        lastUpdate: now
-      }))
+      setGameState(prev => {
+        if (!prev) return INITIAL_STATE
+        const safeResources = isFinite(prev.resources) && prev.resources >= 0 ? prev.resources : 0
+        const safeMaxResources = isFinite(prev.maxResources) && prev.maxResources > 0 ? prev.maxResources : 100
+        return {
+          ...prev,
+          resources: Math.min(safeMaxResources, safeResources + regenAmount),
+          lastUpdate: now
+        }
+      })
     }
   }, [])
 
@@ -83,7 +92,10 @@ function App() {
       setGameState(prev => {
         if (!prev) return INITIAL_STATE
         
-        const newResources = Math.min(prev.maxResources, prev.resources + prev.resourceRegenRate)
+        const safeResources = isFinite(prev.resources) && prev.resources >= 0 ? prev.resources : 0
+        const safeMaxResources = isFinite(prev.maxResources) && prev.maxResources > 0 ? prev.maxResources : 100
+        const safeRegenRate = isFinite(prev.resourceRegenRate) && prev.resourceRegenRate > 0 ? prev.resourceRegenRate : 1
+        const newResources = Math.min(safeMaxResources, safeResources + safeRegenRate)
         
         const completedJobs: CraftingJob[] = []
         const remainingJobs: CraftingJob[] = []
