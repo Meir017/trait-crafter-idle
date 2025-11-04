@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { Coins, ArrowUp, Database, Timer, Package, Factory } from '@phosphor-icons/react'
-import { RESOURCE_UPGRADES, CAPACITY_UPGRADES, CRAFT_SPEED_UPGRADES, INVENTORY_UPGRADES, CRAFTING_SLOTS_UPGRADES } from '@/lib/types'
+import { Coins, ArrowUp, Database, Timer, Package, Factory, Users } from '@phosphor-icons/react'
+import { RESOURCE_UPGRADES, CAPACITY_UPGRADES, CRAFT_SPEED_UPGRADES, INVENTORY_UPGRADES, CRAFTING_SLOTS_UPGRADES, CUSTOMER_SPAWN_UPGRADES } from '@/lib/types'
 
 interface ResourcePanelProps {
   resources: number
@@ -14,11 +15,14 @@ interface ResourcePanelProps {
   craftSpeedUpgradeLevel: number
   inventoryUpgradeLevel: number
   craftingSlotsUpgradeLevel: number
+  customerSpawnUpgradeLevel: number
+  nextCustomerArrival: number
   onUpgrade: () => void
   onUpgradeCapacity: () => void
   onUpgradeCraftSpeed: () => void
   onUpgradeInventory: () => void
   onUpgradeCraftingSlots: () => void
+  onUpgradeCustomerSpawn: () => void
 }
 
 export function ResourcePanel({ 
@@ -31,12 +35,24 @@ export function ResourcePanel({
   craftSpeedUpgradeLevel,
   inventoryUpgradeLevel,
   craftingSlotsUpgradeLevel,
+  customerSpawnUpgradeLevel,
+  nextCustomerArrival,
   onUpgrade,
   onUpgradeCapacity,
   onUpgradeCraftSpeed,
   onUpgradeInventory,
-  onUpgradeCraftingSlots
+  onUpgradeCraftingSlots,
+  onUpgradeCustomerSpawn
 }: ResourcePanelProps) {
+  const [timeNow, setTimeNow] = useState(Date.now())
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeNow(Date.now())
+    }, 100)
+    return () => clearInterval(interval)
+  }, [])
+
   const percentage = (resources / maxResources) * 100
   const nextUpgrade = RESOURCE_UPGRADES.find(u => u.level === resourceUpgradeLevel + 1)
   const canUpgrade = nextUpgrade && coins >= nextUpgrade.cost
@@ -52,6 +68,14 @@ export function ResourcePanel({
 
   const nextCraftingSlotsUpgrade = CRAFTING_SLOTS_UPGRADES.find(u => u.level === craftingSlotsUpgradeLevel + 1)
   const canUpgradeCraftingSlots = nextCraftingSlotsUpgrade && coins >= nextCraftingSlotsUpgrade.cost
+
+  const nextCustomerSpawnUpgrade = CUSTOMER_SPAWN_UPGRADES.find(u => u.level === customerSpawnUpgradeLevel + 1)
+  const canUpgradeCustomerSpawn = nextCustomerSpawnUpgrade && coins >= nextCustomerSpawnUpgrade.cost
+
+  const timeUntilNextCustomer = Math.max(0, nextCustomerArrival - timeNow)
+  const currentSpawnUpgrade = CUSTOMER_SPAWN_UPGRADES.find(u => u.level === customerSpawnUpgradeLevel)
+  const maxSpawnTime = currentSpawnUpgrade?.maxTime || 40000
+  const customerArrivalPercent = Math.max(0, 100 - (timeUntilNextCustomer / maxSpawnTime) * 100)
 
   return (
     <Card className="p-6">
@@ -111,6 +135,18 @@ export function ResourcePanel({
           </div>
         </div>
 
+        <div className="pt-2 border-t">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Next Customer
+            </span>
+            <span className="font-mono text-sm">
+              {Math.ceil(timeUntilNextCustomer / 1000)}s
+            </span>
+          </div>
+          <Progress value={customerArrivalPercent} className="h-2" />
+        </div>
+
         <div className="pt-2 border-t space-y-2">
           <div className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-2">
             Upgrades
@@ -156,7 +192,7 @@ export function ResourcePanel({
                 variant={canUpgradeCraftingSlots ? "default" : "outline"}
                 onClick={onUpgradeCraftingSlots}
                 disabled={!canUpgradeCraftingSlots}
-                className="h-9 text-xs gap-1 flex-col py-1 col-span-2"
+                className="h-9 text-xs gap-1 flex-col py-1"
               >
                 <div className="flex items-center gap-1">
                   <Factory size={14} />
@@ -164,6 +200,23 @@ export function ResourcePanel({
                 </div>
                 <div className="text-xs opacity-70">
                   {nextCraftingSlotsUpgrade.cost} <Coins size={12} weight="fill" className="inline" />
+                </div>
+              </Button>
+            )}
+            {nextCustomerSpawnUpgrade && (
+              <Button
+                size="sm"
+                variant={canUpgradeCustomerSpawn ? "default" : "outline"}
+                onClick={onUpgradeCustomerSpawn}
+                disabled={!canUpgradeCustomerSpawn}
+                className="h-9 text-xs gap-1 flex-col py-1"
+              >
+                <div className="flex items-center gap-1">
+                  <Users size={14} />
+                  <span>Arrival Rate</span>
+                </div>
+                <div className="text-xs opacity-70">
+                  {nextCustomerSpawnUpgrade.cost} <Coins size={12} weight="fill" className="inline" />
                 </div>
               </Button>
             )}

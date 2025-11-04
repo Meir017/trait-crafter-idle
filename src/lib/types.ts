@@ -45,10 +45,23 @@ export interface Customer {
   itemType: ItemType
   preferredTrait: TraitType
   minTraitValue: number
+  secondaryTraits?: Partial<Record<TraitType, number>>
   patience: number
   maxPatience: number
   reward: number
   arrivedAt: number
+  level: number
+  experience: number
+  experienceToNextLevel: number
+}
+
+export interface CustomerData {
+  id: string
+  name: string
+  level: number
+  experience: number
+  experienceToNextLevel: number
+  totalPurchases: number
 }
 
 export interface GameState {
@@ -67,6 +80,10 @@ export interface GameState {
   maxInventorySlots: number
   maxCraftingSlots: number
   craftingSlotsUpgradeLevel: number
+  customerSpawnRate: number
+  customerSpawnUpgradeLevel: number
+  nextCustomerArrival: number
+  customerDatabase: Record<string, CustomerData>
 }
 
 export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
@@ -203,4 +220,15 @@ export const CRAFTING_SLOTS_UPGRADES = [
   { level: 6, maxSlots: 6, cost: 3000 },
   { level: 7, maxSlots: 8, cost: 6000 },
   { level: 8, maxSlots: 10, cost: 12000 }
+]
+
+export const CUSTOMER_SPAWN_UPGRADES = [
+  { level: 1, spawnRate: 1.0, cost: 0, minTime: 20000, maxTime: 40000 },
+  { level: 2, spawnRate: 0.9, cost: 80, minTime: 18000, maxTime: 36000 },
+  { level: 3, spawnRate: 0.8, cost: 200, minTime: 16000, maxTime: 32000 },
+  { level: 4, spawnRate: 0.7, cost: 450, minTime: 14000, maxTime: 28000 },
+  { level: 5, spawnRate: 0.6, cost: 900, minTime: 12000, maxTime: 24000 },
+  { level: 6, spawnRate: 0.5, cost: 1800, minTime: 10000, maxTime: 20000 },
+  { level: 7, spawnRate: 0.4, cost: 3600, minTime: 8000, maxTime: 16000 },
+  { level: 8, spawnRate: 0.3, cost: 7200, minTime: 6000, maxTime: 12000 }
 ]

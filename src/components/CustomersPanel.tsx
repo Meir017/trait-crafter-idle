@@ -51,16 +51,35 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
           const isUrgent = patiencePercent < 30
 
           const matchingItems = inventory.filter(item => item.type === customer.itemType)
+          
           const bestItem = matchingItems.reduce<CraftedItem | null>((best, item) => {
+            let meetsRequirements = item.traits[customer.preferredTrait] >= customer.minTraitValue
+            
+            if (customer.secondaryTraits && meetsRequirements) {
+              for (const [trait, minValue] of Object.entries(customer.secondaryTraits)) {
+                if (item.traits[trait as keyof typeof item.traits] < minValue) {
+                  meetsRequirements = false
+                  break
+                }
+              }
+            }
+            
+            if (!meetsRequirements) return best
+            
             const itemValue = item.traits[customer.preferredTrait]
             const bestValue = best ? best.traits[customer.preferredTrait] : -1
             return itemValue > bestValue ? item : best
           }, null)
 
-          const canSell = bestItem && bestItem.traits[customer.preferredTrait] >= customer.minTraitValue
+          const canSell = bestItem !== null
 
-          const optimalCost = customer.minTraitValue * 1.5
+          let optimalCost = customer.minTraitValue * 1.5
+          if (customer.secondaryTraits) {
+            optimalCost += Object.values(customer.secondaryTraits).reduce((sum, val) => sum + val * 1.2, 0)
+          }
           const canAffordOptimal = resources >= optimalCost
+
+          const expPercent = (customer.experience / customer.experienceToNextLevel) * 100
 
           return (
             <Card 
@@ -76,11 +95,22 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{customer.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{customer.name}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        Lvl {customer.level}
+                      </Badge>
+                    </div>
                     <Badge variant="outline" className="bg-accent text-accent-foreground">
                       {customer.reward} 💰
                     </Badge>
                   </div>
+
+                  {customer.level > 1 && (
+                    <div className="mb-2">
+                      <Progress value={expPercent} className="h-1" />
+                    </div>
+                  )}
 
                   <div className="text-sm mb-2">
                     Wants: <span className="font-medium">
@@ -89,13 +119,25 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
                     </span>
                   </div>
 
-                  <div className="text-sm mb-3">
-                    Prefers:{' '}
-                    <span className="font-medium">
-                      {TRAIT_INFO[customer.preferredTrait].icon}{' '}
-                      {TRAIT_INFO[customer.preferredTrait].name}
-                    </span>
-                    {' '}(min {customer.minTraitValue})
+                  <div className="text-sm mb-2 space-y-1">
+                    <div>
+                      Prefers:{' '}
+                      <span className="font-medium">
+                        {TRAIT_INFO[customer.preferredTrait].icon}{' '}
+                        {TRAIT_INFO[customer.preferredTrait].name}
+                      </span>
+                      {' '}(min {customer.minTraitValue})
+                    </div>
+                    {customer.secondaryTraits && Object.keys(customer.secondaryTraits).length > 0 && (
+                      <div className="text-xs text-muted-foreground pl-2 space-y-0.5">
+                        {Object.entries(customer.secondaryTraits).map(([trait, minValue]) => (
+                          <div key={trait}>
+                            + {TRAIT_INFO[trait as keyof typeof TRAIT_INFO].icon}{' '}
+                            {TRAIT_INFO[trait as keyof typeof TRAIT_INFO].name} (min {minValue})
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="mb-2">

@@ -27,11 +27,11 @@ The game involves crafting, customer management, and resource allocation with pe
 - **Success criteria**: Items show unlock requirements with progress bars, locked items cannot be crafted, unlocks trigger when requirements met, levels unlock at milestones (10, 25, 50, 100 crafted), higher levels craft faster and provide better base stats, crafting times feel balanced (3-8 seconds base)
 
 ### Customer System
-- **Functionality**: Customers arrive periodically with specific item requests and trait preferences, offering coins for successful trades. Customers only request items that the player has unlocked by crafting at least one of that item type.
-- **Purpose**: Creates time pressure and strategic crafting decisions - players must craft items that match customer demands. Limiting requests to unlocked items provides natural progression gates.
-- **Trigger**: Random customer arrival after time interval (20-40 seconds)
-- **Progression**: Customer arrives → Displays wanted item (from unlocked types) and preferred traits → Player selects matching item from inventory → Transaction completes → Earn coins → Customer leaves
-- **Success criteria**: Customers display clear preferences, only request unlocked item types, successful trades award coins, customers leave after timeout or purchase, better trait matches yield bonus coins
+- **Functionality**: Customers arrive periodically with specific item requests and trait preferences, offering coins for successful trades. Customers only request items that the player has unlocked by crafting at least one of that item type. Customer arrival time is shown with a countdown timer and progress bar. Customers have persistent identities, gaining experience and levels with each successful purchase. Higher level customers request stronger items with minimum requirements in multiple traits (level 3+ adds 1 secondary trait, level 5+ can have 1-2 secondary traits, level 7+ always has 2 secondary traits).
+- **Purpose**: Creates time pressure and strategic crafting decisions - players must craft items that match customer demands. Limiting requests to unlocked items provides natural progression gates. Customer leveling adds long-term relationship building and progressively harder challenges. The arrival timer with upgrades gives players control over customer flow.
+- **Trigger**: Customers arrive based on timer (default 20-40 seconds, upgradeable to 6-12 seconds at max level). Timer shows countdown to next arrival.
+- **Progression**: Timer counts down → Customer arrives → Displays wanted item (from unlocked types), level, experience, and preferred traits (primary + optional secondary traits) → Player selects matching item from inventory → Transaction completes → Customer gains experience → May level up → Earn coins → Customer leaves
+- **Success criteria**: Customers display clear preferences with primary and secondary trait requirements, only request unlocked item types, successful trades award coins and experience, customers level up and become more demanding, customers leave after timeout or purchase, better trait matches yield bonus coins, arrival timer shows time until next customer with upgradeable spawn rate
 
 ### Resource Production Upgrades
 - **Functionality**: Players can spend coins to permanently upgrade their resource regeneration rate through 8 upgrade levels (1/s → 25/s)
@@ -68,6 +68,20 @@ The game involves crafting, customer management, and resource allocation with pe
 - **Progression**: Hit inventory limit → Buy upgrade → Can store more items → Continue crafting without selling immediately
 - **Success criteria**: Inventory counts include queued items, upgrades increase cap (75, 100, 150, 200, 300, 500, 1000), costs scale (80, 200, 450, 900, 1800, 3600, 7200)
 
+### Customer Arrival Rate Upgrades
+- **Functionality**: Reduce time between customer arrivals from 20-40 seconds (base) to 6-12 seconds (max level) across 8 upgrade levels. Progress bar shows countdown to next customer arrival.
+- **Purpose**: Accelerates gameplay and increases sales opportunities as players progress, giving them more frequent chances to trade items
+- **Trigger**: Player purchases customer spawn rate upgrade from resource panel
+- **Progression**: Earn coins → Buy arrival rate upgrade → Customers arrive more frequently → More trading opportunities → Faster coin generation
+- **Success criteria**: Timer accurately shows time until next customer, spawn rate multipliers apply correctly (1.0x down to 0.3x), costs scale (80, 200, 450, 900, 1800, 3600, 7200), upgrades persist, visual timer shows countdown and fills as arrival approaches
+
+### Customer Experience & Leveling
+- **Functionality**: Customers have persistent identities that gain experience points with each successful trade, leveling up to request increasingly difficult items with multi-trait requirements
+- **Purpose**: Creates long-term progression and relationship building, rewards players for serving the same customers repeatedly, adds complexity as customers grow more demanding
+- **Trigger**: Successful sale to customer awards experience (10 base + 5 per customer level + 20 bonus for perfect match)
+- **Progression**: Sell item to customer → Customer gains experience → Progress bar fills → Customer levels up → Returns with harder requests (higher trait minimums + secondary trait requirements) → Higher rewards for success
+- **Success criteria**: Customer data persists between visits, experience bars show progress, level-ups trigger celebration toast, higher level customers request items with 1-2 secondary trait requirements in addition to primary trait, rewards scale with customer level and difficulty
+
 ### Inventory & Storage
 - **Functionality**: Grid display of crafted items showing their trait values and item type, with upgradeable capacity
 - **Purpose**: Visual feedback of crafting results and strategic choice in which items to sell to which customers
@@ -89,10 +103,12 @@ The game involves crafting, customer management, and resource allocation with pe
 - **Full inventory/queue** - Prevent crafting when inventory + queue reaches capacity, show clear message with inventory upgrade suggestion
 - **All crafting slots busy** - Prevent new crafts when all slots occupied, items queue for next available slot, clear slot status shown (e.g., "3 / 3 slots busy")
 - **Multiple customers waiting** - Queue customers with max 3 visible, oldest leaves first if not served within time limit
-- **Page closed during customer visit** - Customers don't persist, only resources and inventory/progression save
+- **Page closed during customer visit** - Customers don't persist, only resources and inventory/progression save, customer database (levels/experience) persists
 - **Page closed during crafting** - Crafting jobs continue progressing based on timestamp, complete when player returns
 - **First-time player** - Tutorial tooltip overlay explaining resource allocation and customer system
 - **Crafting queue full** - Show queue status in inventory count, prevent new crafts when at capacity
+- **Customer multi-trait requirements** - Higher level customers (3+) require items to meet secondary trait minimums in addition to primary trait, craft optimal button calculates correct allocation, items in inventory must meet all requirements to be sellable
+- **Returning customers** - Same customer names can appear multiple times with their saved level and experience, experience persists across sessions
 
 ## Design Direction
 

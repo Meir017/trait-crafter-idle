@@ -8,6 +8,7 @@ import { InventoryPanel } from '@/components/InventoryPanel'
 import {
   ItemType,
   Traits,
+  TraitType,
   CraftedItem,
   Customer,
   GameState,
@@ -21,9 +22,10 @@ import {
   CAPACITY_UPGRADES,
   CRAFT_SPEED_UPGRADES,
   INVENTORY_UPGRADES,
-  CRAFTING_SLOTS_UPGRADES
+  CRAFTING_SLOTS_UPGRADES,
+  CUSTOMER_SPAWN_UPGRADES
 } from '@/lib/types'
-import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits } from '@/lib/game-logic'
+import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits, calculateCustomerLevel } from '@/lib/game-logic'
 
 const INITIAL_STATE: GameState = {
   resources: 100,
@@ -46,7 +48,11 @@ const INITIAL_STATE: GameState = {
   inventoryUpgradeLevel: 1,
   maxInventorySlots: 50,
   maxCraftingSlots: 1,
-  craftingSlotsUpgradeLevel: 1
+  craftingSlotsUpgradeLevel: 1,
+  customerSpawnRate: 1.0,
+  customerSpawnUpgradeLevel: 1,
+  nextCustomerArrival: Date.now() + 20000,
+  customerDatabase: {}
 }
 
 function App() {
@@ -148,25 +154,27 @@ function App() {
   }, [setGameState])
 
   useEffect(() => {
-    const spawnCustomer = () => {
-      setCustomers(prev => {
-        if (prev.length >= MAX_CUSTOMERS) return prev
-        return [...prev, generateCustomer(gameState?.craftCounts)]
-      })
+    if (!gameState) return
+
+    const checkCustomerSpawn = () => {
+      const now = Date.now()
+      
+      if (now >= gameState.nextCustomerArrival && customers.length < MAX_CUSTOMERS) {
+        const newCustomer = generateCustomer(gameState.craftCounts, gameState.customerDatabase)
+        setCustomers(prev => [...prev, newCustomer])
+        
+        const spawnUpgrade = CUSTOMER_SPAWN_UPGRADES.find(u => u.level === gameState.customerSpawnUpgradeLevel)
+        const minTime = spawnUpgrade?.minTime || 20000
+        const maxTime = spawnUpgrade?.maxTime || 40000
+        const nextArrival = now + Math.random() * (maxTime - minTime) + minTime
+        
+        setGameState(prev => prev ? { ...prev, nextCustomerArrival: nextArrival } : INITIAL_STATE)
+      }
     }
 
-    const scheduleNext = () => {
-      const delay = Math.random() * (CUSTOMER_SPAWN_MAX - CUSTOMER_SPAWN_MIN) + CUSTOMER_SPAWN_MIN
-      return setTimeout(() => {
-        spawnCustomer()
-        timeoutRef = scheduleNext()
-      }, delay)
-    }
-
-    let timeoutRef = scheduleNext()
-
-    return () => clearTimeout(timeoutRef)
-  }, [gameState?.craftCounts])
+    const interval = setInterval(checkCustomerSpawn, 100)
+    return () => clearInterval(interval)
+  }, [gameState, customers.length, setGameState])
 
   const handleCraft = useCallback((itemType: ItemType, traits: Traits) => {
     setGameState(prev => {
@@ -234,14 +242,42 @@ function App() {
         customer.preferredTrait
       )
 
-      const bonus = item.traits[customer.preferredTrait] >= customer.minTraitValue * 1.5 ? 
+      const preferredTraitMatch = item.traits[customer.preferredTrait] >= customer.minTraitValue * 1.5
+      let allSecondaryTraitsMet = true
+      
+      if (customer.secondaryTraits) {
+        for (const [trait, minValue] of Object.entries(customer.secondaryTraits)) {
+          if (item.traits[trait as TraitType] < minValue) {
+            allSecondaryTraitsMet = false
+            break
+          }
+        }
+      }
+
+      const bonus = preferredTraitMatch && allSecondaryTraitsMet ? 
         Math.floor(customer.reward * 0.5) : 0
 
       const totalReward = customer.reward + bonus
+      
+      const experienceGained = 10 + (customer.level * 5) + (bonus > 0 ? 20 : 0)
+      const newExperience = customer.experience + experienceGained
+      const levelData = calculateCustomerLevel(newExperience)
+
+      const customerKey = `customer-${customer.name}`
+      const updatedCustomerData = {
+        id: customerKey,
+        name: customer.name,
+        level: levelData.level,
+        experience: newExperience,
+        experienceToNextLevel: levelData.experienceToNext,
+        totalPurchases: (prev.customerDatabase[customerKey]?.totalPurchases || 0) + 1
+      }
 
       setCustomers(prevCustomers => prevCustomers.filter(c => c.id !== customerId))
 
-      if (bonus > 0) {
+      if (levelData.level > customer.level) {
+        toast.success(`${customer.name} leveled up to level ${levelData.level}! 🎉`)
+      } else if (bonus > 0) {
         toast.success(`Sold to ${customer.name} for ${totalReward} coins! (+${bonus} bonus!)`)
       } else {
         toast.success(`Sold to ${customer.name} for ${totalReward} coins!`)
@@ -251,6 +287,10 @@ function App() {
         ...prev,
         coins: prev.coins + totalReward,
         inventory: prev.inventory.filter(i => i.id !== itemId),
+        customerDatabase: {
+          ...prev.customerDatabase,
+          [customerKey]: updatedCustomerData
+        },
         lastUpdate: Date.now()
       }
     })
@@ -370,6 +410,29 @@ function App() {
     })
   }, [setGameState])
 
+  const handleUpgradeCustomerSpawn = useCallback(() => {
+    setGameState(prev => {
+      if (!prev) return INITIAL_STATE
+
+      const nextUpgrade = CUSTOMER_SPAWN_UPGRADES.find(u => u.level === prev.customerSpawnUpgradeLevel + 1)
+      
+      if (!nextUpgrade || prev.coins < nextUpgrade.cost) {
+        toast.error('Not enough coins!')
+        return prev
+      }
+
+      toast.success(`Customer arrival rate upgraded to level ${nextUpgrade.level}! (${Math.round((1 - nextUpgrade.spawnRate) * 100)}% faster)`)
+
+      return {
+        ...prev,
+        coins: prev.coins - nextUpgrade.cost,
+        customerSpawnRate: nextUpgrade.spawnRate,
+        customerSpawnUpgradeLevel: nextUpgrade.level,
+        lastUpdate: Date.now()
+      }
+    })
+  }, [setGameState])
+
   const handleCraftForCustomer = useCallback((customer: Customer) => {
     setGameState(prev => {
       if (!prev) return INITIAL_STATE
@@ -454,11 +517,14 @@ function App() {
                 craftSpeedUpgradeLevel={gameState.craftSpeedUpgradeLevel}
                 inventoryUpgradeLevel={gameState.inventoryUpgradeLevel}
                 craftingSlotsUpgradeLevel={gameState.craftingSlotsUpgradeLevel}
+                customerSpawnUpgradeLevel={gameState.customerSpawnUpgradeLevel}
+                nextCustomerArrival={gameState.nextCustomerArrival}
                 onUpgrade={handleUpgradeResources}
                 onUpgradeCapacity={handleUpgradeCapacity}
                 onUpgradeCraftSpeed={handleUpgradeCraftSpeed}
                 onUpgradeInventory={handleUpgradeInventory}
                 onUpgradeCraftingSlots={handleUpgradeCraftingSlots}
+                onUpgradeCustomerSpawn={handleUpgradeCustomerSpawn}
               />
               <CraftingPanel
                 selectedItem={selectedItem}
