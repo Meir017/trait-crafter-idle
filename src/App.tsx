@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useKV } from '@github/spark/hooks'
 import { Toaster, toast } from 'sonner'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
 import { ResourcePanel } from '@/components/ResourcePanel'
 import { CraftingPanel } from '@/components/CraftingPanel'
 import { CustomersPanel } from '@/components/CustomersPanel'
@@ -56,7 +56,7 @@ const INITIAL_STATE: GameState = {
 }
 
 function App() {
-  const [gameState, setGameState] = useKV<GameState>('game-state', INITIAL_STATE)
+  const [gameState, setGameState] = useLocalStorage<GameState>('game-state', INITIAL_STATE)
   const [selectedItem, setSelectedItem] = useState<ItemType>('sword')
   const [customers, setCustomers] = useState<Customer[]>([])
 
