@@ -11,7 +11,9 @@ import {
   calculateResourceRegen,
   calculateCraftTime,
   calculateOptimalTraits,
-  getQualityInfo
+  getQualityInfo,
+  calculateWeightedQuality,
+  calculateItemTier
 } from './game-logic'
 import { ItemType, TraitType } from './types'
 
@@ -358,13 +360,13 @@ describe('calculateOptimalTraits', () => {
   }
 
   it('allocates traits to meet customer requirements', () => {
-    const result = calculateOptimalTraits(mockCustomer, 500, 'sword', 1)
+    const result = calculateOptimalTraits(mockCustomer, 500, 'sword', 0)
     expect(result.traits.quality).toBeGreaterThan(0)
     expect(result.totalCost).toBeLessThanOrEqual(500)
   })
 
   it('prioritizes preferred trait', () => {
-    const result = calculateOptimalTraits(mockCustomer, 500, 'sword', 1)
+    const result = calculateOptimalTraits(mockCustomer, 500, 'sword', 0)
     const preferredValue = result.traits[mockCustomer.preferredTrait]
     const otherTraitValues = Object.entries(result.traits)
       .filter(([trait]) => trait !== mockCustomer.preferredTrait)
@@ -374,24 +376,24 @@ describe('calculateOptimalTraits', () => {
   })
 
   it('allocates secondary traits', () => {
-    const result = calculateOptimalTraits(mockCustomer, 500, 'sword', 1)
+    const result = calculateOptimalTraits(mockCustomer, 500, 'sword', 0)
     if (mockCustomer.secondaryTraits) {
       expect(result.traits.speed).toBeGreaterThan(0)
     }
   })
 
   it('respects minimum resource cost', () => {
-    const result = calculateOptimalTraits(mockCustomer, 10, 'sword', 1)
+    const result = calculateOptimalTraits(mockCustomer, 10, 'sword', 0)
     expect(result.totalCost).toBeGreaterThanOrEqual(40) // sword tier 1 min cost
   })
 
   it('handles zero resources', () => {
-    const result = calculateOptimalTraits(mockCustomer, 0, 'sword', 1)
+    const result = calculateOptimalTraits(mockCustomer, 0, 'sword', 0)
     expect(result.totalCost).toBeGreaterThan(0)
   })
 
   it('handles negative resources gracefully', () => {
-    const result = calculateOptimalTraits(mockCustomer, -100, 'sword', 1)
+    const result = calculateOptimalTraits(mockCustomer, -100, 'sword', 0)
     expect(result.totalCost).toBeGreaterThanOrEqual(0)
   })
 })
@@ -427,5 +429,122 @@ describe('getQualityInfo', () => {
     expect(result).toHaveProperty('borderClass')
     expect(result).toHaveProperty('badgeVariant')
     expect(result).toHaveProperty('bgGradient')
+  })
+})
+
+describe('calculateWeightedQuality', () => {
+  it('calculates weighted quality for swords prioritizing durability', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 30,
+      speed: 30,
+      durability: 30,
+      style: 30
+    }
+    const result = calculateWeightedQuality('sword', traits)
+    expect(result).toBeGreaterThan(0)
+    // Sword weights: quality 1.2, speed 1.0, durability 1.3, style 0.8
+    const expected = 30 * 1.2 + 30 * 1.0 + 30 * 1.3 + 30 * 0.8
+    expect(result).toBeCloseTo(expected, 1)
+  })
+
+  it('calculates weighted quality for potions prioritizing quality', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 50,
+      speed: 20,
+      durability: 20,
+      style: 20
+    }
+    const result = calculateWeightedQuality('potion', traits)
+    expect(result).toBeGreaterThan(0)
+  })
+
+  it('handles zero traits', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 0,
+      speed: 0,
+      durability: 0,
+      style: 0
+    }
+    const result = calculateWeightedQuality('sword', traits)
+    expect(result).toBe(0)
+  })
+})
+
+describe('calculateItemTier', () => {
+  it('returns tier 1 for low craft counts', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 25,
+      speed: 25,
+      durability: 25,
+      style: 25
+    }
+    const result = calculateItemTier('sword', traits, 0)
+    expect(result).toBe(1)
+  })
+
+  it('can return higher tiers with more resources and higher craft counts', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 60,
+      speed: 50,
+      durability: 60,
+      style: 30
+    }
+    // At 15 crafts, tiers 1-3 should be available for swords
+    const result = calculateItemTier('sword', traits, 15)
+    expect(result).toBeGreaterThanOrEqual(1)
+    expect(result).toBeLessThanOrEqual(3)
+  })
+
+  it('returns only unlocked tiers based on craft count', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 100,
+      speed: 100,
+      durability: 100,
+      style: 100
+    }
+    // At 3 crafts, only tiers 1 should be available
+    const result = calculateItemTier('sword', traits, 3)
+    expect(result).toBe(1)
+  })
+
+  it('handles very high resource allocations', () => {
+    const traits: Record<TraitType, number> = {
+      quality: 100,
+      speed: 100,
+      durability: 100,
+      style: 100
+    }
+    const result = calculateItemTier('sword', traits, 50)
+    expect(result).toBeGreaterThanOrEqual(1)
+    expect(result).toBeLessThanOrEqual(5)
+  })
+
+  it('benefits from optimal trait allocation for item type', () => {
+    // For swords, durability is weighted higher
+    const goodAllocation: Record<TraitType, number> = {
+      quality: 30,
+      speed: 20,
+      durability: 50,
+      style: 20
+    }
+    const poorAllocation: Record<TraitType, number> = {
+      quality: 30,
+      speed: 30,
+      durability: 20,
+      style: 40
+    }
+    
+    // Run multiple times since it's probabilistic
+    let goodTierSum = 0
+    let poorTierSum = 0
+    const iterations = 10
+    
+    for (let i = 0; i < iterations; i++) {
+      goodTierSum += calculateItemTier('sword', goodAllocation, 15)
+      poorTierSum += calculateItemTier('sword', poorAllocation, 15)
+    }
+    
+    // Good allocation should generally result in equal or better tiers on average
+    expect(goodTierSum).toBeGreaterThanOrEqual(poorTierSum * 0.8)
   })
 })
