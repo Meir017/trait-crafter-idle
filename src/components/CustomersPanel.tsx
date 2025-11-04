@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { User, ShoppingBag, Hammer } from '@phosphor-icons/react'
 import { Customer, CraftedItem, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
-import { getQualityInfo } from '@/lib/game-logic'
+import { getQualityInfo, getTierInfo } from '@/lib/game-logic'
 
 interface CustomersPanelProps {
   customers: Customer[]
@@ -188,7 +188,7 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
                         variant="default"
                       >
                         <ShoppingBag size={16} />
-                        Sell (Lv {bestItem.level}, {bestItem.traits[customer.preferredTrait]} {TRAIT_INFO[customer.preferredTrait].icon})
+                        Sell {getTierInfo(bestItem.type, bestItem.tier).name} (Lv {bestItem.level}, {bestItem.traits[customer.preferredTrait]} {TRAIT_INFO[customer.preferredTrait].icon})
                       </Button>
                       <div className="text-xs text-center text-muted-foreground">
                         {(() => {

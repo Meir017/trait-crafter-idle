@@ -15,6 +15,7 @@ export interface CraftedItem {
   traits: Traits
   craftedAt: number
   level: number
+  tier: number
 }
 
 export interface CraftingJob {
@@ -24,6 +25,16 @@ export interface CraftingJob {
   startTime: number
   duration: number
   level: number
+  tier: number
+}
+
+export interface ItemTier {
+  tier: number
+  name: string
+  minResourceCost: number
+  valueMultiplier: number
+  craftTimeMultiplier: number
+  unlockAt: number
 }
 
 export interface ItemDefinition {
@@ -32,6 +43,7 @@ export interface ItemDefinition {
   icon: string
   baseValue: number
   levels: number[]
+  tiers: ItemTier[]
   baseCraftTime: number
   unlockRequirement?: {
     itemType: ItemType
@@ -93,6 +105,13 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '⚔️',
     baseValue: 10,
     levels: [0, 10, 25, 50, 100],
+    tiers: [
+      { tier: 1, name: 'Iron', minResourceCost: 40, valueMultiplier: 1.0, craftTimeMultiplier: 1.0, unlockAt: 0 },
+      { tier: 2, name: 'Steel', minResourceCost: 80, valueMultiplier: 1.5, craftTimeMultiplier: 1.2, unlockAt: 5 },
+      { tier: 3, name: 'Mithril', minResourceCost: 120, valueMultiplier: 2.0, craftTimeMultiplier: 1.4, unlockAt: 15 },
+      { tier: 4, name: 'Adamantine', minResourceCost: 160, valueMultiplier: 2.8, craftTimeMultiplier: 1.6, unlockAt: 30 },
+      { tier: 5, name: 'Legendary', minResourceCost: 200, valueMultiplier: 4.0, craftTimeMultiplier: 2.0, unlockAt: 50 }
+    ],
     baseCraftTime: 5000
   },
   potion: {
@@ -101,6 +120,13 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '🧪',
     baseValue: 8,
     levels: [0, 10, 25, 50, 100],
+    tiers: [
+      { tier: 1, name: 'Minor', minResourceCost: 30, valueMultiplier: 1.0, craftTimeMultiplier: 1.0, unlockAt: 0 },
+      { tier: 2, name: 'Lesser', minResourceCost: 60, valueMultiplier: 1.4, craftTimeMultiplier: 1.15, unlockAt: 5 },
+      { tier: 3, name: 'Greater', minResourceCost: 90, valueMultiplier: 1.9, craftTimeMultiplier: 1.3, unlockAt: 15 },
+      { tier: 4, name: 'Superior', minResourceCost: 130, valueMultiplier: 2.6, craftTimeMultiplier: 1.5, unlockAt: 30 },
+      { tier: 5, name: 'Elixir', minResourceCost: 180, valueMultiplier: 3.8, craftTimeMultiplier: 1.8, unlockAt: 50 }
+    ],
     baseCraftTime: 3000,
     unlockRequirement: {
       itemType: 'sword',
@@ -113,6 +139,13 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '🛡️',
     baseValue: 15,
     levels: [0, 10, 25, 50, 100],
+    tiers: [
+      { tier: 1, name: 'Leather', minResourceCost: 50, valueMultiplier: 1.0, craftTimeMultiplier: 1.0, unlockAt: 0 },
+      { tier: 2, name: 'Chainmail', minResourceCost: 100, valueMultiplier: 1.6, craftTimeMultiplier: 1.25, unlockAt: 5 },
+      { tier: 3, name: 'Plate', minResourceCost: 150, valueMultiplier: 2.2, craftTimeMultiplier: 1.5, unlockAt: 15 },
+      { tier: 4, name: 'Enchanted', minResourceCost: 200, valueMultiplier: 3.0, craftTimeMultiplier: 1.7, unlockAt: 30 },
+      { tier: 5, name: 'Dragonscale', minResourceCost: 250, valueMultiplier: 4.5, craftTimeMultiplier: 2.2, unlockAt: 50 }
+    ],
     baseCraftTime: 8000,
     unlockRequirement: {
       itemType: 'potion',
@@ -125,6 +158,13 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '💍',
     baseValue: 12,
     levels: [0, 10, 25, 50, 100],
+    tiers: [
+      { tier: 1, name: 'Copper', minResourceCost: 35, valueMultiplier: 1.0, craftTimeMultiplier: 1.0, unlockAt: 0 },
+      { tier: 2, name: 'Silver', minResourceCost: 70, valueMultiplier: 1.5, craftTimeMultiplier: 1.2, unlockAt: 5 },
+      { tier: 3, name: 'Gold', minResourceCost: 110, valueMultiplier: 2.1, craftTimeMultiplier: 1.4, unlockAt: 15 },
+      { tier: 4, name: 'Platinum', minResourceCost: 150, valueMultiplier: 2.9, craftTimeMultiplier: 1.6, unlockAt: 30 },
+      { tier: 5, name: 'Arcane', minResourceCost: 200, valueMultiplier: 4.2, craftTimeMultiplier: 2.0, unlockAt: 50 }
+    ],
     baseCraftTime: 6000,
     unlockRequirement: {
       itemType: 'sword',
@@ -137,6 +177,13 @@ export const ITEM_DEFINITIONS: Record<ItemType, ItemDefinition> = {
     icon: '🏹',
     baseValue: 11,
     levels: [0, 10, 25, 50, 100],
+    tiers: [
+      { tier: 1, name: 'Shortbow', minResourceCost: 45, valueMultiplier: 1.0, craftTimeMultiplier: 1.0, unlockAt: 0 },
+      { tier: 2, name: 'Longbow', minResourceCost: 85, valueMultiplier: 1.5, craftTimeMultiplier: 1.2, unlockAt: 5 },
+      { tier: 3, name: 'Composite', minResourceCost: 130, valueMultiplier: 2.1, craftTimeMultiplier: 1.4, unlockAt: 15 },
+      { tier: 4, name: 'Elven', minResourceCost: 175, valueMultiplier: 2.9, craftTimeMultiplier: 1.6, unlockAt: 30 },
+      { tier: 5, name: 'Phoenix', minResourceCost: 225, valueMultiplier: 4.3, craftTimeMultiplier: 2.1, unlockAt: 50 }
+    ],
     baseCraftTime: 7000,
     unlockRequirement: {
       itemType: 'armor',

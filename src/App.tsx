@@ -25,7 +25,7 @@ import {
   CRAFTING_SLOTS_UPGRADES,
   CUSTOMER_SPAWN_UPGRADES
 } from '@/lib/types'
-import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits, calculateCustomerLevel } from '@/lib/game-logic'
+import { generateCustomer, calculateItemValue, getItemLevel, calculateCraftTime, calculateOptimalTraits, calculateCustomerLevel, getAvailableTiers, getTierInfo } from '@/lib/game-logic'
 
 const INITIAL_STATE: GameState = {
   resources: 100,
@@ -129,7 +129,8 @@ function App() {
           type: job.type,
           traits: job.traits,
           craftedAt: now,
-          level: job.level
+          level: job.level,
+          tier: job.tier
         }))
         
         let updatedState = {
@@ -188,11 +189,20 @@ function App() {
     return () => clearInterval(interval)
   }, [gameState, customers.length, setGameState])
 
-  const handleCraft = useCallback((itemType: ItemType, traits: Traits, craftLevel?: number) => {
+  const handleCraft = useCallback((itemType: ItemType, traits: Traits, craftLevel?: number, craftTier?: number) => {
     setGameState(prev => {
       if (!prev) return INITIAL_STATE
 
       const totalCost = Object.values(traits).reduce((sum, val) => sum + val, 0)
+      
+      const craftCount = prev.craftCounts[itemType] || 0
+      const tier = craftTier || 1
+      const tierInfo = getTierInfo(itemType, tier)
+      
+      if (totalCost < tierInfo.minResourceCost) {
+        toast.error(`Minimum ${tierInfo.minResourceCost} resources required for ${tierInfo.name} tier!`)
+        return prev
+      }
       
       if (totalCost > prev.resources) {
         toast.error('Not enough resources!')
@@ -209,7 +219,6 @@ function App() {
         return prev
       }
 
-      const craftCount = prev.craftCounts[itemType] || 0
       const maxLevel = getItemLevel(craftCount)
       const level = craftLevel && craftLevel <= maxLevel ? craftLevel : maxLevel
       const itemDef = ITEM_DEFINITIONS[itemType]
@@ -217,7 +226,7 @@ function App() {
       const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === prev.craftSpeedUpgradeLevel)
       const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
       
-      const craftTime = calculateCraftTime(itemDef.baseCraftTime, level, speedMultiplier)
+      const craftTime = calculateCraftTime(itemType, tier, level, speedMultiplier)
 
       const newJob: CraftingJob = {
         id: `job-${Date.now()}-${Math.random()}`,
@@ -225,10 +234,11 @@ function App() {
         traits,
         startTime: Date.now(),
         duration: craftTime,
-        level
+        level,
+        tier
       }
 
-      toast.success(`Started crafting Level ${level} ${itemDef.name}! (${(craftTime / 1000).toFixed(1)}s)`)
+      toast.success(`Started crafting ${tierInfo.name} ${itemDef.name} Lv${level}! (${(craftTime / 1000).toFixed(1)}s)`)
 
       return {
         ...prev,
@@ -250,7 +260,8 @@ function App() {
       if (!item) return prev
 
       const value = calculateItemValue(
-        ITEM_DEFINITIONS[item.type].baseValue,
+        item.type,
+        item.tier,
         item.traits,
         customer.preferredTrait
       )
@@ -450,7 +461,11 @@ function App() {
     setGameState(prev => {
       if (!prev) return INITIAL_STATE
 
-      const { traits, totalCost } = calculateOptimalTraits(customer, prev.resources)
+      const craftCount = prev.craftCounts[customer.itemType] || 0
+      const availableTiers = getAvailableTiers(customer.itemType, craftCount)
+      const tier = availableTiers[availableTiers.length - 1] || 1
+
+      const { traits, totalCost } = calculateOptimalTraits(customer, prev.resources, customer.itemType, tier)
 
       if (totalCost > prev.resources) {
         toast.error('Not enough resources!')
@@ -467,14 +482,14 @@ function App() {
         return prev
       }
 
-      const craftCount = prev.craftCounts[customer.itemType] || 0
       const level = getItemLevel(craftCount)
       const itemDef = ITEM_DEFINITIONS[customer.itemType]
+      const tierInfo = getTierInfo(customer.itemType, tier)
       
       const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === prev.craftSpeedUpgradeLevel)
       const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
       
-      const craftTime = calculateCraftTime(itemDef.baseCraftTime, level, speedMultiplier)
+      const craftTime = calculateCraftTime(customer.itemType, tier, level, speedMultiplier)
 
       const newJob: CraftingJob = {
         id: `job-${Date.now()}-${Math.random()}`,
@@ -482,10 +497,11 @@ function App() {
         traits,
         startTime: Date.now(),
         duration: craftTime,
-        level
+        level,
+        tier
       }
 
-      toast.success(`Crafting optimal ${itemDef.name} for ${customer.name}! (${(craftTime / 1000).toFixed(1)}s)`)
+      toast.success(`Crafting ${tierInfo.name} ${itemDef.name} for ${customer.name}! (${(craftTime / 1000).toFixed(1)}s)`)
 
       return {
         ...prev,

@@ -5,9 +5,9 @@ import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
-import { Hammer, Lock, TrendUp, Clock, Star } from '@phosphor-icons/react'
+import { Hammer, Lock, TrendUp, Clock, Star, Sparkle } from '@phosphor-icons/react'
 import { ItemType, TraitType, Traits, CraftingJob, ITEM_DEFINITIONS, TRAIT_INFO, CRAFT_SPEED_UPGRADES } from '@/lib/types'
-import { getItemLevel, getNextLevelThreshold, calculateCraftTime, getQualityInfo } from '@/lib/game-logic'
+import { getItemLevel, getNextLevelThreshold, calculateCraftTime, getQualityInfo, getAvailableTiers, getTierInfo } from '@/lib/game-logic'
 
 interface CraftingPanelProps {
   selectedItem: ItemType
@@ -17,7 +17,7 @@ interface CraftingPanelProps {
   craftingQueue: CraftingJob[]
   craftSpeedLevel: number
   maxCraftingSlots: number
-  onCraft: (itemType: ItemType, traits: Traits, craftLevel?: number) => void
+  onCraft: (itemType: ItemType, traits: Traits, craftLevel?: number, craftTier?: number) => void
 }
 
 export function CraftingPanel({
@@ -37,6 +37,7 @@ export function CraftingPanel({
     style: 25
   })
   const [selectedCraftLevel, setSelectedCraftLevel] = useState(1)
+  const [selectedTier, setSelectedTier] = useState(1)
   const [, setTick] = useState(0)
 
   useEffect(() => {
@@ -46,11 +47,17 @@ export function CraftingPanel({
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    const craftCount = craftCounts[selectedItem] || 0
+    const availableTiers = getAvailableTiers(selectedItem, craftCount)
+    if (!availableTiers.includes(selectedTier)) {
+      setSelectedTier(availableTiers[availableTiers.length - 1] || 1)
+    }
+  }, [selectedItem, craftCounts, selectedTier])
+
   const totalResources = useMemo(() => {
     return Object.values(traitValues).reduce((sum, val) => sum + val, 0)
   }, [traitValues])
-
-  const canCraft = totalResources <= resources
 
   const handleTraitChange = (trait: TraitType, value: number[]) => {
     const newValue = value[0]
@@ -109,8 +116,9 @@ export function CraftingPanel({
   }
 
   const handleCraft = () => {
-    if (canCraft) {
-      onCraft(selectedItem, traitValues, selectedCraftLevel)
+    const canCraftNow = totalTraits <= resources && meetsMinimum
+    if (canCraftNow) {
+      onCraft(selectedItem, traitValues, selectedCraftLevel, selectedTier)
     }
   }
 
@@ -121,12 +129,18 @@ export function CraftingPanel({
   const currentMaxLevel = getItemLevel(craftCounts[selectedItem] || 0)
   const availableLevels = Array.from({ length: currentMaxLevel }, (_, i) => i + 1)
   
+  const craftCount = craftCounts[selectedItem] || 0
+  const availableTiers = getAvailableTiers(selectedItem, craftCount)
+  const currentTierInfo = getTierInfo(selectedItem, selectedTier)
+  
   const itemDef = ITEM_DEFINITIONS[selectedItem]
   const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
-  const estimatedCraftTime = calculateCraftTime(itemDef.baseCraftTime, selectedCraftLevel, speedMultiplier)
+  const estimatedCraftTime = calculateCraftTime(selectedItem, selectedTier, selectedCraftLevel, speedMultiplier)
   
   const totalTraits = Object.values(traitValues).reduce((sum, val) => sum + val, 0)
   const quality = getQualityInfo(totalTraits)
+  const meetsMinimum = totalTraits >= currentTierInfo.minResourceCost
+  const canCraft = totalTraits <= resources && meetsMinimum
 
   return (
     <Card className="p-6">
@@ -157,13 +171,14 @@ export function CraftingPanel({
             const remaining = Math.max(0, (job.duration - elapsed) / 1000)
             const remainingDisplay = isFinite(remaining) ? remaining : 0
             const itemDef = ITEM_DEFINITIONS[job.type]
+            const tierInfo = getTierInfo(job.type, job.tier)
             
             return (
               <div key={job.id} className="p-2 bg-muted/50 rounded-lg space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{itemDef.icon}</span>
-                    <span className="font-medium">{itemDef.name}</span>
+                    <span className="font-medium">{tierInfo.name} {itemDef.name}</span>
                     <Badge variant="default" className="text-xs px-1.5 py-0">Lv {job.level}</Badge>
                     <Badge variant="outline" className="text-xs px-1.5 py-0">Slot {index + 1}</Badge>
                   </div>
@@ -244,6 +259,42 @@ export function CraftingPanel({
 
       <Separator className="my-4" />
 
+      {availableTiers.length > 1 && (
+        <>
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+                <Sparkle size={16} />
+                Item Tier
+              </span>
+              <Badge variant="default">
+                {currentTierInfo.name}
+              </Badge>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {availableTiers.map(tier => {
+                const tierInfo = getTierInfo(selectedItem, tier)
+                return (
+                  <Button
+                    key={tier}
+                    variant={selectedTier === tier ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedTier(tier)}
+                    className="flex-1 min-w-[80px]"
+                  >
+                    {tierInfo.name}
+                  </Button>
+                )
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground text-center">
+              Min cost: {currentTierInfo.minResourceCost} · Value: ×{currentTierInfo.valueMultiplier.toFixed(1)}
+            </div>
+          </div>
+          <Separator className="my-4" />
+        </>
+      )}
+
       {currentMaxLevel > 1 && (
         <>
           <div className="space-y-3 mb-4">
@@ -282,9 +333,16 @@ export function CraftingPanel({
           <span className="text-sm font-medium uppercase tracking-wide">
             Allocate Resources
           </span>
-          <span className={`font-mono text-sm ${!canCraft ? 'text-destructive' : ''}`}>
-            {totalResources} / {Math.floor(resources)}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className={`font-mono text-sm ${!canCraft ? 'text-destructive' : meetsMinimum ? 'text-success' : 'text-muted-foreground'}`}>
+              {totalTraits} / {Math.floor(resources)}
+            </span>
+            {!meetsMinimum && (
+              <span className="text-xs text-destructive">
+                Min: {currentTierInfo.minResourceCost}
+              </span>
+            )}
+          </div>
         </div>
 
         {(Object.keys(TRAIT_INFO) as TraitType[]).map(trait => {
@@ -319,7 +377,7 @@ export function CraftingPanel({
         size="lg"
       >
         <Hammer size={20} />
-        Craft {ITEM_DEFINITIONS[selectedItem].name}
+        Craft {currentTierInfo.name} {ITEM_DEFINITIONS[selectedItem].name}
       </Button>
 
       <div className="mt-4 text-sm text-muted-foreground">

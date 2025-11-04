@@ -123,11 +123,17 @@ export function generateCustomer(
 }
 
 export function calculateItemValue(
-  baseValue: number,
+  itemType: ItemType,
+  tier: number,
   traits: Record<TraitType, number>,
   preferredTrait?: TraitType
 ): number {
-  if (!isFinite(baseValue) || baseValue < 0) baseValue = 0
+  const itemDef = ITEM_DEFINITIONS[itemType]
+  const tierInfo = getTierInfo(itemType, tier)
+  
+  const baseValue = itemDef.baseValue * tierInfo.valueMultiplier
+  
+  if (!isFinite(baseValue) || baseValue < 0) return 0
   
   const totalTraits = Object.values(traits).reduce((sum, val) => {
     const safeVal = isFinite(val) && val >= 0 ? val : 0
@@ -156,6 +162,18 @@ export function getItemLevel(craftCount: number): number {
   return 1
 }
 
+export function getAvailableTiers(itemType: ItemType, craftCount: number): number[] {
+  const itemDef = ITEM_DEFINITIONS[itemType]
+  return itemDef.tiers
+    .filter(tier => craftCount >= tier.unlockAt)
+    .map(tier => tier.tier)
+}
+
+export function getTierInfo(itemType: ItemType, tier: number) {
+  const itemDef = ITEM_DEFINITIONS[itemType]
+  return itemDef.tiers.find(t => t.tier === tier) || itemDef.tiers[0]
+}
+
 export function getNextLevelThreshold(craftCount: number): number | null {
   const levels = [10, 25, 50, 100]
   for (const threshold of levels) {
@@ -172,23 +190,31 @@ export function calculateResourceRegen(lastUpdate: number, currentTime: number):
 }
 
 export function calculateCraftTime(
-  baseTime: number,
+  itemType: ItemType,
+  tier: number,
   itemLevel: number,
   speedMultiplier: number
 ): number {
-  if (!isFinite(baseTime) || baseTime <= 0) baseTime = 1000
+  const itemDef = ITEM_DEFINITIONS[itemType]
+  const tierInfo = getTierInfo(itemType, tier)
+  const baseTime = itemDef.baseCraftTime
+  
+  if (!isFinite(baseTime) || baseTime <= 0) return 1000
   if (!isFinite(itemLevel) || itemLevel < 1) itemLevel = 1
   if (!isFinite(speedMultiplier) || speedMultiplier <= 0) speedMultiplier = 1
   
   const levelBonus = Math.max(0.5, 1 - (itemLevel - 1) * 0.1)
-  const result = Math.floor(baseTime * speedMultiplier * levelBonus)
+  const result = Math.floor(baseTime * speedMultiplier * levelBonus * tierInfo.craftTimeMultiplier)
   return Math.max(100, result)
 }
 
 export function calculateOptimalTraits(
   customer: Customer,
-  availableResources: number
+  availableResources: number,
+  itemType: ItemType,
+  tier: number
 ): { traits: Record<TraitType, number>; totalCost: number } {
+  const tierInfo = getTierInfo(itemType, tier)
   const preferredTrait = customer.preferredTrait
   const minValue = isFinite(customer.minTraitValue) && customer.minTraitValue > 0 
     ? customer.minTraitValue 
@@ -198,6 +224,7 @@ export function calculateOptimalTraits(
     availableResources = 0
   }
   
+  const minCost = tierInfo.minResourceCost
   let primaryAmount = Math.floor(minValue * 1.5)
   
   const traits: Record<TraitType, number> = {
@@ -219,6 +246,12 @@ export function calculateOptimalTraits(
       traits[traitKey] = requiredAmount
       totalCost += requiredAmount
     }
+  }
+  
+  if (totalCost < minCost) {
+    const deficit = minCost - totalCost
+    traits[preferredTrait] += deficit
+    totalCost = minCost
   }
   
   const remainingResources = Math.max(0, availableResources - totalCost)

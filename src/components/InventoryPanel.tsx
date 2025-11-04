@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Package, Sparkle } from '@phosphor-icons/react'
 import { CraftedItem, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
-import { getQualityInfo } from '@/lib/game-logic'
+import { getQualityInfo, getTierInfo } from '@/lib/game-logic'
 
 interface InventoryPanelProps {
   inventory: CraftedItem[]
@@ -46,6 +46,7 @@ export function InventoryPanel({ inventory, maxSlots, queueLength }: InventoryPa
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {inventory.map(item => {
           const def = ITEM_DEFINITIONS[item.type]
+          const tierInfo = getTierInfo(item.type, item.tier)
           const totalTraits = Object.values(item.traits).reduce((sum, val) => {
             const safeVal = isFinite(val) && val >= 0 ? val : 0
             return sum + safeVal
@@ -65,7 +66,7 @@ export function InventoryPanel({ inventory, maxSlots, queueLength }: InventoryPa
               )}
               <div className="text-center">
                 <div className="text-3xl mb-1">{def.icon}</div>
-                <div className="text-xs font-medium mb-2">{def.name}</div>
+                <div className="text-xs font-medium mb-1">{tierInfo.name} {def.name}</div>
                 <div className="flex gap-1 justify-center mb-2">
                   <Badge variant="secondary" className="text-xs">
                     Lv {item.level}
