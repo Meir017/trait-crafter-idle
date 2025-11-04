@@ -50,10 +50,59 @@ export function CraftingPanel({
   const canCraft = totalResources <= resources
 
   const handleTraitChange = (trait: TraitType, value: number[]) => {
-    setTraitValues(prev => ({
-      ...prev,
-      [trait]: value[0]
-    }))
+    const newValue = value[0]
+    
+    setTraitValues(prev => {
+      const currentTotal = Object.values(prev).reduce((sum, val) => sum + val, 0)
+      const diff = newValue - prev[trait]
+      
+      if (diff === 0) return prev
+      
+      const otherTraits = (Object.keys(prev) as TraitType[]).filter(t => t !== trait)
+      
+      if (diff > 0) {
+        const totalOthers = otherTraits.reduce((sum, t) => sum + prev[t], 0)
+        
+        if (totalOthers === 0) {
+          return { ...prev, [trait]: newValue }
+        }
+        
+        const updated: Traits = { ...prev, [trait]: newValue }
+        let remainingToReduce = diff
+        
+        otherTraits.forEach(t => {
+          const proportion = prev[t] / totalOthers
+          const reduction = Math.min(prev[t], Math.round(diff * proportion))
+          updated[t] = prev[t] - reduction
+          remainingToReduce -= reduction
+        })
+        
+        while (remainingToReduce > 0) {
+          const nonZeroTraits = otherTraits.filter(t => updated[t] > 0)
+          if (nonZeroTraits.length === 0) break
+          
+          for (const t of nonZeroTraits) {
+            if (remainingToReduce <= 0) break
+            updated[t] = Math.max(0, updated[t] - 1)
+            remainingToReduce--
+          }
+        }
+        
+        return updated
+      } else {
+        const updated: Traits = { ...prev, [trait]: newValue }
+        const amountToDistribute = Math.abs(diff)
+        
+        const increasePerTrait = Math.floor(amountToDistribute / otherTraits.length)
+        const remainder = amountToDistribute % otherTraits.length
+        
+        otherTraits.forEach((t, index) => {
+          updated[t] = prev[t] + increasePerTrait + (index < remainder ? 1 : 0)
+        })
+        
+        return updated
+      }
+    })
   }
 
   const handleCraft = () => {
