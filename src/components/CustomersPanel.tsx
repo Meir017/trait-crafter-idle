@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { User, ShoppingBag, Hammer } from '@phosphor-icons/react'
 import { Customer, CraftedItem, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
+import { getQualityInfo } from '@/lib/game-logic'
 
 interface CustomersPanelProps {
   customers: Customer[]
@@ -179,15 +180,24 @@ export function CustomersPanel({ customers, inventory, resources, onSell, onCraf
                       )}
                     </div>
                   ) : canSell ? (
-                    <Button
-                      onClick={() => onSell(customer.id, bestItem.id)}
-                      size="sm"
-                      className="w-full"
-                      variant="default"
-                    >
-                      <ShoppingBag size={16} />
-                      Sell ({bestItem.traits[customer.preferredTrait]} {TRAIT_INFO[customer.preferredTrait].icon})
-                    </Button>
+                    <div className="space-y-1">
+                      <Button
+                        onClick={() => onSell(customer.id, bestItem.id)}
+                        size="sm"
+                        className="w-full"
+                        variant="default"
+                      >
+                        <ShoppingBag size={16} />
+                        Sell (Lv {bestItem.level}, {bestItem.traits[customer.preferredTrait]} {TRAIT_INFO[customer.preferredTrait].icon})
+                      </Button>
+                      <div className="text-xs text-center text-muted-foreground">
+                        {(() => {
+                          const totalTraits = Object.values(bestItem.traits).reduce((sum, val) => sum + val, 0)
+                          const quality = getQualityInfo(totalTraits)
+                          return <span className={quality.color}>{quality.label} Quality</span>
+                        })()}
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       <Button

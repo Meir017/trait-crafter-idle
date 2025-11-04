@@ -1,7 +1,8 @@
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Package } from '@phosphor-icons/react'
+import { Package, Sparkle } from '@phosphor-icons/react'
 import { CraftedItem, ITEM_DEFINITIONS, TRAIT_INFO } from '@/lib/types'
+import { getQualityInfo } from '@/lib/game-logic'
 
 interface InventoryPanelProps {
   inventory: CraftedItem[]
@@ -49,31 +50,35 @@ export function InventoryPanel({ inventory, maxSlots, queueLength }: InventoryPa
             const safeVal = isFinite(val) && val >= 0 ? val : 0
             return sum + safeVal
           }, 0)
-          const quality = totalTraits > 200 ? 'legendary' : totalTraits > 150 ? 'rare' : totalTraits > 100 ? 'uncommon' : 'common'
           
-          const borderColor = {
-            legendary: 'border-accent',
-            rare: 'border-primary',
-            uncommon: 'border-success',
-            common: 'border-border'
-          }[quality]
+          const quality = getQualityInfo(totalTraits)
 
           return (
             <Card
               key={item.id}
-              className={`p-3 ${borderColor} border-2 hover:shadow-lg transition-shadow cursor-pointer`}
+              className={`p-3 ${quality.borderClass} ${quality.bgGradient} border-2 hover:shadow-xl transition-all cursor-pointer relative overflow-hidden`}
             >
+              {quality.tier === 'legendary' && (
+                <div className="absolute top-1 right-1">
+                  <Sparkle size={16} className="text-accent animate-pulse" weight="fill" />
+                </div>
+              )}
               <div className="text-center">
                 <div className="text-3xl mb-1">{def.icon}</div>
                 <div className="text-xs font-medium mb-2">{def.name}</div>
-                <Badge variant="secondary" className="text-xs mb-2">
-                  Lv {item.level}
-                </Badge>
+                <div className="flex gap-1 justify-center mb-2">
+                  <Badge variant="secondary" className="text-xs">
+                    Lv {item.level}
+                  </Badge>
+                  <Badge variant={quality.badgeVariant} className="text-xs">
+                    {quality.label}
+                  </Badge>
+                </div>
                 <div className="grid grid-cols-2 gap-1 text-xs">
                   {Object.entries(item.traits).map(([trait, value]) => {
                     const safeValue = isFinite(value) && value >= 0 ? value : 0
                     return (
-                      <div key={trait} className="flex items-center gap-1">
+                      <div key={trait} className="flex items-center gap-1 justify-center">
                         <span>{TRAIT_INFO[trait as keyof typeof TRAIT_INFO].icon}</span>
                         <span className="font-mono text-[10px]">{safeValue}</span>
                       </div>

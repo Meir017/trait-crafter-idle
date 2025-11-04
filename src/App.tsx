@@ -188,7 +188,7 @@ function App() {
     return () => clearInterval(interval)
   }, [gameState, customers.length, setGameState])
 
-  const handleCraft = useCallback((itemType: ItemType, traits: Traits) => {
+  const handleCraft = useCallback((itemType: ItemType, traits: Traits, craftLevel?: number) => {
     setGameState(prev => {
       if (!prev) return INITIAL_STATE
 
@@ -210,7 +210,8 @@ function App() {
       }
 
       const craftCount = prev.craftCounts[itemType] || 0
-      const level = getItemLevel(craftCount)
+      const maxLevel = getItemLevel(craftCount)
+      const level = craftLevel && craftLevel <= maxLevel ? craftLevel : maxLevel
       const itemDef = ITEM_DEFINITIONS[itemType]
       
       const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === prev.craftSpeedUpgradeLevel)
@@ -227,7 +228,7 @@ function App() {
         level
       }
 
-      toast.success(`Started crafting ${itemDef.name}! (${(craftTime / 1000).toFixed(1)}s)`)
+      toast.success(`Started crafting Level ${level} ${itemDef.name}! (${(craftTime / 1000).toFixed(1)}s)`)
 
       return {
         ...prev,

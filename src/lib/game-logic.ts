@@ -240,3 +240,51 @@ export function calculateOptimalTraits(
   
   return { traits, totalCost: Math.max(0, totalCost) }
 }
+
+export function getQualityInfo(totalTraits: number): { 
+  tier: 'legendary' | 'rare' | 'uncommon' | 'common'
+  label: string
+  color: string
+  borderClass: string
+  badgeVariant: 'default' | 'secondary' | 'outline'
+  bgGradient: string
+} {
+  if (totalTraits > 200) {
+    return {
+      tier: 'legendary',
+      label: 'Legendary',
+      color: 'text-accent',
+      borderClass: 'border-accent shadow-lg shadow-accent/20',
+      badgeVariant: 'default',
+      bgGradient: 'bg-gradient-to-br from-accent/10 to-accent/5'
+    }
+  }
+  if (totalTraits > 150) {
+    return {
+      tier: 'rare',
+      label: 'Rare',
+      color: 'text-primary',
+      borderClass: 'border-primary shadow-md shadow-primary/20',
+      badgeVariant: 'default',
+      bgGradient: 'bg-gradient-to-br from-primary/10 to-primary/5'
+    }
+  }
+  if (totalTraits > 100) {
+    return {
+      tier: 'uncommon',
+      label: 'Uncommon',
+      color: 'text-success',
+      borderClass: 'border-success shadow-sm shadow-success/10',
+      badgeVariant: 'secondary',
+      bgGradient: 'bg-gradient-to-br from-success/10 to-success/5'
+    }
+  }
+  return {
+    tier: 'common',
+    label: 'Common',
+    color: 'text-muted-foreground',
+    borderClass: 'border-border',
+    badgeVariant: 'outline',
+    bgGradient: 'bg-card'
+  }
+}

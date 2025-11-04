@@ -5,9 +5,9 @@ import { Slider } from '@/components/ui/slider'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
-import { Hammer, Lock, TrendUp, Clock } from '@phosphor-icons/react'
+import { Hammer, Lock, TrendUp, Clock, Star } from '@phosphor-icons/react'
 import { ItemType, TraitType, Traits, CraftingJob, ITEM_DEFINITIONS, TRAIT_INFO, CRAFT_SPEED_UPGRADES } from '@/lib/types'
-import { getItemLevel, getNextLevelThreshold } from '@/lib/game-logic'
+import { getItemLevel, getNextLevelThreshold, calculateCraftTime, getQualityInfo } from '@/lib/game-logic'
 
 interface CraftingPanelProps {
   selectedItem: ItemType
@@ -17,7 +17,7 @@ interface CraftingPanelProps {
   craftingQueue: CraftingJob[]
   craftSpeedLevel: number
   maxCraftingSlots: number
-  onCraft: (itemType: ItemType, traits: Traits) => void
+  onCraft: (itemType: ItemType, traits: Traits, craftLevel?: number) => void
 }
 
 export function CraftingPanel({
@@ -36,6 +36,7 @@ export function CraftingPanel({
     durability: 25,
     style: 25
   })
+  const [selectedCraftLevel, setSelectedCraftLevel] = useState(1)
   const [, setTick] = useState(0)
 
   useEffect(() => {
@@ -109,13 +110,23 @@ export function CraftingPanel({
 
   const handleCraft = () => {
     if (canCraft) {
-      onCraft(selectedItem, traitValues)
+      onCraft(selectedItem, traitValues, selectedCraftLevel)
     }
   }
 
   const itemTypes: ItemType[] = ['sword', 'potion', 'armor', 'ring', 'bow']
   const speedUpgrade = CRAFT_SPEED_UPGRADES.find(u => u.level === craftSpeedLevel)
   const speedBonus = speedUpgrade ? Math.round((1 - speedUpgrade.speedMultiplier) * 100) : 0
+  
+  const currentMaxLevel = getItemLevel(craftCounts[selectedItem] || 0)
+  const availableLevels = Array.from({ length: currentMaxLevel }, (_, i) => i + 1)
+  
+  const itemDef = ITEM_DEFINITIONS[selectedItem]
+  const speedMultiplier = speedUpgrade?.speedMultiplier || 1.0
+  const estimatedCraftTime = calculateCraftTime(itemDef.baseCraftTime, selectedCraftLevel, speedMultiplier)
+  
+  const totalTraits = Object.values(traitValues).reduce((sum, val) => sum + val, 0)
+  const quality = getQualityInfo(totalTraits)
 
   return (
     <Card className="p-6">
@@ -153,7 +164,8 @@ export function CraftingPanel({
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{itemDef.icon}</span>
                     <span className="font-medium">{itemDef.name}</span>
-                    <Badge variant="default" className="text-xs px-1.5 py-0">Slot {index + 1}</Badge>
+                    <Badge variant="default" className="text-xs px-1.5 py-0">Lv {job.level}</Badge>
+                    <Badge variant="outline" className="text-xs px-1.5 py-0">Slot {index + 1}</Badge>
                   </div>
                   <span className="font-mono text-muted-foreground">
                     {remainingDisplay.toFixed(1)}s
@@ -231,6 +243,39 @@ export function CraftingPanel({
       </div>
 
       <Separator className="my-4" />
+
+      {currentMaxLevel > 1 && (
+        <>
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+                <Star size={16} />
+                Craft Level
+              </span>
+              <Badge variant="secondary">
+                Level {selectedCraftLevel}
+              </Badge>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {availableLevels.map(level => (
+                <Button
+                  key={level}
+                  variant={selectedCraftLevel === level ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCraftLevel(level)}
+                  className="flex-1 min-w-[60px]"
+                >
+                  Lv {level}
+                </Button>
+              ))}
+            </div>
+            <div className="text-xs text-muted-foreground text-center">
+              Craft time: {(estimatedCraftTime / 1000).toFixed(1)}s · Quality: <span className={quality.color}>{quality.label}</span>
+            </div>
+          </div>
+          <Separator className="my-4" />
+        </>
+      )}
 
       <div className="space-y-4 mb-6">
         <div className="flex items-center justify-between">
